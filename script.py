@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 
-
+# Make a list of your keywords
 seznam_kw = [["Keywords"], ["Audi"], ["BMW"], ["Mercedes"], 
              ["Ford"], ["Fiat"], ["Vauxhall"]]
 
+#This chunk of code prints the list of keywords as csv to working directory
 import csv 
 #data = [['1'], ['3'], ['5'],['7']] 
 file = open('keyword_list.csv', 'w+', newline ='') 
@@ -12,8 +13,7 @@ with file:
     write.writerows(seznam_kw) 
  
 
-print("H")
-
+#Chunk of code, co jsem ukradl
 from pytrends.request import TrendReq
 import pandas as pd
 import time
@@ -49,9 +49,7 @@ print('Execution time in sec.: ' + str(executionTime))
 
 
 
-# import numpy as np
-
-
+#From downloaded data a classical dataframe is created
 prazdnej_list = []
 data_matrix = pd.DataFrame(prazdnej_list)
 
