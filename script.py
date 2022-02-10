@@ -35,7 +35,7 @@ for x in range(0,len(df2)):
      kw_list=keywords,
      cat=0,
      timeframe='2020-04-01 2020-05-01',
-     geo='GB')
+     geo='CZ')
      data = pytrend.interest_over_time()
      if not data.empty:
           data = data.drop(labels=['isPartial'],axis='columns')
