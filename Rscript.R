@@ -1,8 +1,10 @@
 library(gtrendsR)
 library(tidyverse)
+library(dplyr)
 library(lubridate)
 
-get_daily_gtrend <- function(keyword = c('Taylor Swift', 'Kim Kardashian'), geo = 'US', from = '2013-01-01', to = '2019-08-15') {
+get_daily_gtrend <- function(keyword = c('Taylor Swift', 'Kim Kardashian'), geo = 'US', 
+                             from = '2013-01-01', to = '2019-08-15') {
   if (ymd(to) >= floor_date(Sys.Date(), 'month')) {
     to <- floor_date(ymd(to), 'month') - days(1)
     
@@ -56,4 +58,17 @@ get_daily_gtrend <- function(keyword = c('Taylor Swift', 'Kim Kardashian'), geo 
   return(trend_res)
 }
 
-get_daily_gtrend(keyword = c('Taylor Swift', 'Kim Kardashian'), geo = 'US', from = '2013-01-01', to = '2013-09-01')
+data <- get_daily_gtrend(keyword = c('Taylor Swift', 'Kim Kardashian'),
+                         geo = 'US', from = '2010-01-01', to = '2022-01-01')
+
+data %>% head
+
+View(data)
+
+
+
+
+
+
+
+
