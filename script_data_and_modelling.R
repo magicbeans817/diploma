@@ -30,6 +30,52 @@ for (i in 1:pocet_sheetu) {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 x <- data.frame(x, row.names = x[,"Year"])
 row.names(x) <- x[,"Year"]
 x %>% dim
