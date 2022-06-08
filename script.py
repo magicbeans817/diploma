@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 
 # Make a list of your keywords
-seznam_kw = [["Keywords"], ["ukraine"], ["ukrainian refugees"], ["war"], # tady prepis keywords
-             ["Nuclear Bomb"], ["Nuclear War"], ["Putin"], ["idi na chuj"], ["red cross"]]
+seznam_kw = [["Keywords"], ["inflace"], ["inflation"], ["ceny"], # tady prepis keywords
+             ["zdrazovani"],  ["zdrazeni"], ["zlato"], ["nemovitosti"],
+             ["investice"], ["investovat"], ["nakup zlata"]
+             ]
 
 #This chunk of code prints the list of keywords as csv to working directory
 import csv 
@@ -34,7 +36,7 @@ for x in range(0,len(df2)):
      pytrend.build_payload(
      kw_list=keywords,
      cat=0,
-     timeframe=  '2010-12-01 2022-03-08',
+     timeframe=  '2004-01-01 2022-04-30',
      geo='CZ') # geopoliticka oblast
      data = pytrend.interest_over_time()
      if not data.empty:
