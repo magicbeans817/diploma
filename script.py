@@ -36,7 +36,7 @@ for x in range(0,len(df2)):
      pytrend.build_payload(
      kw_list=keywords,
      cat=0,
-     timeframe=  '2004-01-01 2022-04-30',
+     timeframe=  '2004-01-01 2022-04-30', # casovy interval sberu, format je rok-mesic-den
      geo='CZ') # geopoliticka oblast, GB je Velka Britanie, US Spojene Staty
      data = pytrend.interest_over_time()
      if not data.empty:
