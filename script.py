@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Make a list of your keywords
-seznam_kw = [["Keywords"], ["inflace"], ["inflation"], ["ceny"], # tady prepis keywords
+seznam_kw = [["Keywords"], ["inflace"], ["inflation"], ["ceny"], # tady prepsat keywords
              ["zdrazovani"],  ["zdrazeni"], ["zlato"], ["nemovitosti"],
              ["investice"], ["investovat"], ["nakup zlata"]
              ]
@@ -20,7 +20,7 @@ from pytrends.request import TrendReq
 import pandas as pd
 import time
 startTime = time.time()
-pytrend = TrendReq(hl='cs-CZ', tz=360)
+pytrend = TrendReq(hl='cs-CZ', tz=360)  # tady je jazyk - en-GB je birtska anglictina, en-US americka
 
 colnames = ["keywords"]
 df = pd.read_csv("keyword_list.csv", names=colnames)
@@ -37,7 +37,7 @@ for x in range(0,len(df2)):
      kw_list=keywords,
      cat=0,
      timeframe=  '2004-01-01 2022-04-30',
-     geo='CZ') # geopoliticka oblast
+     geo='CZ') # geopoliticka oblast, GB je Velka Britanie, US Spojene Staty
      data = pytrend.interest_over_time()
      if not data.empty:
           data = data.drop(labels=['isPartial'],axis='columns')
