@@ -60,7 +60,7 @@ gt %>% head
 gt%>% dim
 
 
-inf_fd_s <- inf_fd[49:(length(inf_fd) - 8)]
+inf_fd_s <- window(inf_fd, start = (2010))
 inf_fd_s %>% length
 
 
