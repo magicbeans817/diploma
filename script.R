@@ -66,7 +66,7 @@ gt%>% dim
 # 3) Inflation and stationarity
 
 start <- c(2010, 1)
-end   <- c(2020, 1)
+end   <- c(2022, 4)
 
 # 3.1) 
 
@@ -91,12 +91,20 @@ tseries::adf.test(inf_cmpy_s_sd)
 
 # 3.3)
 
+inf_cpm_s <- window(inf_cpm, start = start, end = end)
+plot(inf_cpm_s)
+tseries::adf.test(inf_cpm_s)
+
+inf_cpm_s_sd <- diff(inf_cpm_s)
+plot(inf_cpm_s_sd)
+tseries::adf.test(inf_cpm_s_sd)
 
 
 
-
-
-
+gt_inf <- ts(gt$inflace, frequency = 12, start = c(2004, 1))
+gt_inf_s <- window(gt_inf, start = start, end = end)
+plot(gt_inf_s)
+tseries::adf.test(gt_inf_s)
 
 
 
