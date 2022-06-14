@@ -111,6 +111,22 @@ plot(inf_cpm_s_sd)
 tseries::adf.test(inf_cpm_s_sd)
 
 
+######################################################################################################
+# 4) modelling
+
+model <- lm(inf_fd_s ~ gt_inf_s)
+summary(model)
+
+
+
+
+
+
+
+
+
+
+
 
 
 
