@@ -2,7 +2,7 @@
 
 # Make a list of your keywords
 seznam_kw = [["Keywords"], ["inflace"], ["inflation"], ["ceny"], # tady prepsat keywords
-             ["zdrazovani"],  ["zdrazeni"], ["zlato"], ["nemovitosti"],
+             ["zdrazovani"],  ["zdrazeni"], ["zlato"], ["nemovitosti"],["cena"],
              ["investice"], ["investovat"], ["nakup zlata"]
              ]
 
