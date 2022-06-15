@@ -152,7 +152,7 @@ tseries::adf.test(inf_classic_sd_s)
 gt_inf_s <- gt_inf
 inf_classic_fd
 gt_inf_s
-gt_inf_s <- gt_inf_s /gt_inf_s[2] * inf_classic_fd[1]
+gt_inf_s <- gt_inf_s / mean(gt_inf_s) * mean(inf_classic_fd)
 gt_inf_s 
 gt_inf_s <- gt_inf_s[-1] 
 gt_inf_s <- ts(gt_inf_s, frequency = 12, start = c(rok, mesic + 1))
@@ -197,10 +197,15 @@ summary(model)
 
 
 
+######################################################################################################
+# 4) cointegracni hovna a johansenuv test
+
+library(urca)
 
 
-
-
+pomocny_df <- data.frame(inf_classic_fd, gt_inf_s)
+jotest <- urca::ca.jo(pomocny_df, type = "trace", K = 2, ecdet = "none", spec = "transitory")
+summary(jotest)
 
 
 
