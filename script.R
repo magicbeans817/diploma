@@ -3,7 +3,7 @@ library(dplyr)
 library(forecast)
 library(aTSA)
 library(tseries)
-
+library(stringr)
 
 
 
@@ -62,14 +62,15 @@ gt <- read.csv("search_trends.csv", row.names = 1)
 gt %>% head
 gt%>% dim
 
+start <- rownames(gt)[1]
+rok   <- as.numeric(substr(start, 1, 4))
+mesic <- as.numeric(substr(start, 6, 7))
+start <- c(rok, mesic)
 
-gt_inf <- ts(gt$inflace, frequency = 12, start = c(2004, 1))
+gt_inf <- ts(gt$inflace, frequency = 12, start = start)
 gt_inf_s <- window(gt_inf, start = start, end = end)
 plot(gt_inf_s)
 tseries::adf.test(gt_inf_s)
-
-
-
 
 
 
@@ -118,17 +119,25 @@ model <- lm(inf_fd_s ~ gt_inf_s)
 summary(model)
 
 
+# 4.1) indian paper
 
+inf_classic_s <- window(inf_classic, start = start, end = end)
+inf_classic_s <- inf_classic_s / inf_classic_s[1] * 100
+inf_classic_s_fd <- diff(inf_classic_s)
+plot(inf_classic_s_fd)
 
+gt_inf_s <- window(gt_inf, start = start, end = end)
+gt_inf_s <- gt_inf_s * 100 / gt_inf_s[1]
+plot(gt_inf_s)
+gt_inf_s <- gt_inf_s[-1]
 
+model <- lm(inf_classic_s_fd ~ gt_inf_s)
+summary(model)
 
+plot(inf_classic_s_fd, model$fitted.values)
+plot(model$fitted.values, col = "red")
 
-
-
-
-
-
-
+plot(x, model$fitted.values)
 
 
 
