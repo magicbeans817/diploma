@@ -5,7 +5,7 @@ library(aTSA)
 library(tseries)
 library(stringr)
 
-
+rm(list = ls())
 
 setwd("C:/Users/jsuch/Desktop/diploma") #set your working directory
 
@@ -66,18 +66,24 @@ start <- rownames(gt)[1]
 rok   <- as.numeric(substr(start, 1, 4))
 mesic <- as.numeric(substr(start, 6, 7))
 start <- c(rok, mesic)
+print(start)
+end   <- c(2022, 4)
 
-gt_inf <- ts(gt$inflace, frequency = 12, start = start)
-gt_inf_s <- window(gt_inf, start = start, end = end)
-plot(gt_inf_s)
-tseries::adf.test(gt_inf_s)
+
+
+
+
+gt_inf   <- ts(gt$inflace, frequency = 12, start = start)
+gt_inf_s <- gt_inf
+plot(gt_inf)
+tseries::adf.test(gt_inf)
 
 
 
 ######################################################################################################
 # 3) Inflation and stationarity
 
-start <- c(2010, 1)
+start <- c(2004, 1)
 end   <- c(2022, 4)
 
 # 3.1) 
@@ -111,15 +117,69 @@ inf_cpm_s_sd <- diff(inf_cpm_s)
 plot(inf_cpm_s_sd)
 tseries::adf.test(inf_cpm_s_sd)
 
+# 3.4)
+
+inf_classic_s <- window(inf_classic, start = start, end = end) #subsetuju podle gt
+inf_classic_s <- inf_classic_s * 100 / inf_classic_s[1]        #preskaluju aby base year
+
+
+
+# first difference
+
+inf_classic_fd <- diff(inf_classic_s)
+plot(inf_classic_fd)
+tseries::adf.test(inf_classic_fd)
+
+tseries::kpss.test(inf_classic_fd, null = c("Level", "Trend"))
+Box.test(inf_classic_fd, type = "Ljung-Box")
+
+#second difference - not finished
+inf_classic_sd <- diff(inf_classic_fd)
+
+plot(inf_classic_sd)
+tseries::adf.test(inf_classic_sd_s)
+
+
+
+
+
 
 ######################################################################################################
 # 4) modelling
 
-model <- lm(inf_fd_s ~ gt_inf_s)
+# 4.1) indian paper
+
+gt_inf_s <- gt_inf
+inf_classic_fd
+gt_inf_s
+gt_inf_s <- gt_inf_s /gt_inf_s[2] * inf_classic_fd[1]
+gt_inf_s 
+gt_inf_s <- gt_inf_s[-1] 
+gt_inf_s <- ts(gt_inf_s, frequency = 12, start = c(rok, mesic + 1))
+
+model <- lm(inf_classic_fd ~ gt_inf_s)
 summary(model)
 
 
-# 4.1) indian paper
+plot(gt_inf_s, as.vector(inf_classic_fd), xlim = c(-1,4), ylim = c(-1,4))
+abline(model$coefficients[1], model$coefficients[2])
+
+plot(as.vector(inf_classic_fd), model$fitted.values, xlim = c(-1,3), ylim = c(-1,3))
+abline(0, 1)
+
+
+plot.ts(inf_classic_fd, main = "Predikce a inflace")
+x <- ts(model$fitted.values, frequency = 12, start = c(rok, mesic + 1))
+#lines(x, col = "red")
+lines(gt_inf_s, col = "blue")
+
+
+
+
+
+
+
+
 
 inf_classic_s <- window(inf_classic, start = start, end = end)
 inf_classic_s <- inf_classic_s / inf_classic_s[1] * 100
@@ -134,10 +194,23 @@ gt_inf_s <- gt_inf_s[-1]
 model <- lm(inf_classic_s_fd ~ gt_inf_s)
 summary(model)
 
-plot(inf_classic_s_fd, model$fitted.values)
-plot(model$fitted.values, col = "red")
 
-plot(x, model$fitted.values)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
