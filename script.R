@@ -198,16 +198,23 @@ summary(model)
 
 
 ######################################################################################################
-# 4) cointegracni hovna a johansenuv test
+# 4) cointegrace a johansenuv test
 
 library(urca)
 
 
 pomocny_df <- data.frame(inf_classic_fd, gt_inf_s)
-jotest <- urca::ca.jo(pomocny_df, type = "trace", K = 2, ecdet = "none", spec = "transitory")
-summary(jotest)
+jotest <- urca::ca.jo(pomocny_df, type = "eigen", K = 2)
+restrikce <- c(1, -1)
+summary(bh5lrtest(jotest, H = restrikce, r = 2))
 
 
+
+
+H1 <- ca.jo(dat1, type='trace', K=2, season=4, dumvar=dat2)
+H51 <- c(1, -1, -1, 0, 0)
+H52 <- c(0, 0, 0, 1, -1)
+summary(bh5lrtest(H1, H=H51, r=2))
 
 
 
