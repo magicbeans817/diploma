@@ -150,9 +150,8 @@ tseries::adf.test(inf_classic_sd_s)
 # 4.1) indian paper
 
 gt_inf_s <- gt_inf
-inf_classic_fd
 gt_inf_s
-gt_inf_s <- gt_inf_s / mean(gt_inf_s) * mean(inf_classic_fd)
+gt_inf_s <- gt_inf_s / mean(gt_inf_s) * mean(inf_cpm_s)
 gt_inf_s 
 gt_inf_s <- gt_inf_s[-1] 
 gt_inf_s <- ts(gt_inf_s, frequency = 12, start = c(rok, mesic + 1))
@@ -202,11 +201,28 @@ summary(model)
 
 library(urca)
 
+inf_cpm_s <- inf_cpm_s[-1]
+inf_cpm_s <- ts(inf_cpm_s, frequency = 12, start = c(rok, mesic + 1))
 
-pomocny_df <- data.frame(inf_classic_fd, gt_inf_s)
-jotest <- urca::ca.jo(pomocny_df, type = "eigen", K = 2)
+pomocny_df <- data.frame(inf_cpm_s, gt_inf_s)
+jotest <- urca::ca.jo(pomocny_df, type = "eigen", K = 2, ecdet = "none", spec = "longrun")
+summary(jotest)
 restrikce <- c(1, -1)
-summary(bh5lrtest(jotest, H = restrikce, r = 2))
+bh5lrtest(jotest, H = restrikce, r = 2)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -214,12 +230,20 @@ summary(bh5lrtest(jotest, H = restrikce, r = 2))
 H1 <- ca.jo(dat1, type='trace', K=2, season=4, dumvar=dat2)
 H51 <- c(1, -1, -1, 0, 0)
 H52 <- c(0, 0, 0, 1, -1)
+summary(bh5lrtest(H1, H=H51, r=1))
+
+
+
+
+data(UKpppuip)
+attach(UKpppuip)
+dat1 <- cbind(p1, p2) #, e12, i1, i2)
+dat2 <- cbind(doilp0, doilp1)
+H1 <- ca.jo(dat1, type='trace', K=2, season=4, dumvar=dat2)
+H51 <- c(1, -1) #, -1, 0, 0)
+H52 <- c(0, 0, 0, 1, -1)
 summary(bh5lrtest(H1, H=H51, r=2))
-
-
-
-
-
+summary(bh5lrtest(H1, H=H52, r=2))
 
 
 
