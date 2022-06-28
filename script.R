@@ -205,12 +205,18 @@ inf_cpm_s <- inf_cpm_s[-1]
 inf_cpm_s <- ts(inf_cpm_s, frequency = 12, start = c(rok, mesic + 1))
 
 pomocny_df <- data.frame(inf_cpm_s, gt_inf_s)
-jotest <- urca::ca.jo(pomocny_df, type = "eigen", K = 2, ecdet = "none", spec = "longrun")
+
+pomocny_df$x <- rnorm(nrow(pomocny_df))
+
+jotest <- urca::ca.jo(pomocny_df, type = "trace", K = 2, ecdet = "none", spec = "transitory")
 summary(jotest)
-restrikce <- c(1, -1)
-bh5lrtest(jotest, H = restrikce, r = 2)
+restrikce <- c(1, -1, 3)
+summary(bh5lrtest(jotest, H = restrikce, r = 2))
 
-
+for (i in 1:100){
+  try(print(summary(bh5lrtest(jotest, H = restrikce, r = i))))
+  print(i)
+}
 
 
 
@@ -237,10 +243,10 @@ summary(bh5lrtest(H1, H=H51, r=1))
 
 data(UKpppuip)
 attach(UKpppuip)
-dat1 <- cbind(p1, p2) #, e12, i1, i2)
+dat1 <- cbind(p1, p2, e12, i1, i2)
 dat2 <- cbind(doilp0, doilp1)
 H1 <- ca.jo(dat1, type='trace', K=2, season=4, dumvar=dat2)
-H51 <- c(1, -1) #, -1, 0, 0)
+H51 <- c(1, -1, -1, 0, 0)
 H52 <- c(0, 0, 0, 1, -1)
 summary(bh5lrtest(H1, H=H51, r=2))
 summary(bh5lrtest(H1, H=H52, r=2))
