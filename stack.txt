@@ -1,0 +1,11 @@
+I am trying to replicate work from [this paper][1], specifically examination of the rationality of inflation and inflation expectations when both series are non-stationary I(1). I need to apply Johansen cointegration method to test whether series of inflation and inflation expectation are cointegrated with a vector (1,-1). However, bh5lrtest does not work no matter how I set r. Where is the problem? Is there any alternative regarding the code?
+
+data(UKpppuip)
+attach(UKpppuip)
+dat1 <- cbind(p1, p2)
+H1 <- ca.jo(dat1, type='trace', K=2)
+H51 <- c(1, -1)
+summary(bh5lrtest(H1, H=H51, r=1))
+
+
+  [1]: https://www.tandfonline.com/doi/full/10.1080/17520843.2019.1599980?scroll=top&needAccess=true
