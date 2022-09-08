@@ -4,6 +4,9 @@ library(forecast)
 library(aTSA)
 library(tseries)
 library(stringr)
+library(lmtest)
+library(rugarch)
+
 
 rm(list = ls())
 
@@ -197,7 +200,7 @@ summary(model)
 
 
 ######################################################################################################
-# 4) cointegrace a johansenuv test
+# 4.1) cointegrace a johansenuv test
 
 library(urca)
 
@@ -208,23 +211,29 @@ pomocny_df <- data.frame(inf_cpm_s, gt_inf_s)
 
 pomocny_df$x <- rnorm(nrow(pomocny_df))
 
-jotest <- urca::ca.jo(pomocny_df, type = "trace", K = 2, ecdet = "none", spec = "transitory")
+jotest <- urca::ca.jo(pomocny_df, type = "trace", K = 5, ecdet = "none", spec = "transitory")
 summary(jotest)
-restrikce <- c(1, -1, 3)
-summary(bh5lrtest(jotest, H = restrikce, r = 2))
+restrikce <- c(-1, 1, 3)
+summary(urca::bh5lrtest(jotest, H = restrikce, r = 2))
 
 for (i in 1:100){
   try(print(summary(bh5lrtest(jotest, H = restrikce, r = i))))
   print(i)
 }
 
+# 4.2) granger causality
+
+
+gt_inf_s <- ts(gt_inf_s, frequency = 12, start = c(rok, mesic + 1))
+lmtest::grangertest(inf_cpm_s, gt_inf_s, order = 3)
+lmtest::grangertest(gt_inf_s, inf_cpm_s, order = 3)
 
 
 
+model <- lm(inf_cpm_s ~ gt_inf_s, data = pomocny_df)
+summary(model)
 
-
-
-
+plot(inf_cpm_s, gt_inf_s)
 
 
 
@@ -250,6 +259,79 @@ H51 <- c(1, -1, -1, 0, 0)
 H52 <- c(0, 0, 0, 1, -1)
 summary(bh5lrtest(H1, H=H51, r=2))
 summary(bh5lrtest(H1, H=H52, r=2))
+
+
+
+
+
+data(UKpppuip)
+attach(UKpppuip)
+dat1 <- cbind(p1, p2)
+H1 <- ca.jo(dat1, type='trace', K=2)
+H51 <- c(1, -1)
+summary(bh5lrtest(H1, H=H51, r=1))
+
+
+######################################################################################################
+# Modelling
+
+inf <- inf_cpm_s
+exter_reg <- gt_inf_s
+
+
+
+
+
+
+
+
+
+
+
+# Arima
+m_arima <- forecast::Arima(inf,  order = c(1,1,1), xreg = exter_reg)
+#summary(m_arima)
+
+
+# Realized Garch
+real_garchspec <- ugarchspec(variance.model = list(model = 'realGARCH', garchOrder = c(1, 1)),
+                             external.regressors = NULL, 
+                             mean.model = list(armaOrder=c(0, 0), include.mean=TRUE))
+real_garch_fit <- ugarchfit(real_garchspec, amt$ret, solver = 'hybrid', realizedVol = sqrt(amt$RV))    
+real_garch_fit
+
+
+# arma-garch
+p_max <- 5
+q_max <- 5
+aic_min <- Inf
+best_p <- 0
+best_q <- 0
+
+matice <- matrix(, ncol = 4)
+for (i1 in 1:p_max) {
+  for (i2 in 1:q_max) {
+    model_specification <- ugarchspec(mean.model = list(armaOrder = c(0, 0), include.mean = FALSE), 
+                                      variance.model = list(garchOrder = c(i1, i2)))
+    fit <- ugarchfit(spec = model_specification, data = amt$ret)
+    inf_crit <- infocriteria(fit)[1] # 1 for aic, 2 for bic,..
+    aic_min <- ifelse(inf_crit < aic_min, inf_crit, aic_min)
+    
+    vektor <- c(i1, i2, infocriteria(fit)[1], infocriteria(fit)[2])
+    matice <- rbind(matice, vektor)
+    
+    best_p <- ifelse(inf_crit == aic_min, i1, best_p)
+    best_q <- ifelse(inf_crit == aic_min, i2, best_q)
+  }
+} 
+
+c(best_p, best_q)
+colnames(matice) <- c("p", "q", "aic", "bic")
+matice
+
+
+
+
 
 
 
