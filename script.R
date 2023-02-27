@@ -199,34 +199,17 @@ summary(model)
 
 
 
+
+
+
+
 ######################################################################################################
-# 4.1) cointegrace a johansenuv test
-
-library(urca)
-
-inf_cpm_s <- inf_cpm_s[-1]
-inf_cpm_s <- ts(inf_cpm_s, frequency = 12, start = c(rok, mesic + 1))
-
-pomocny_df <- data.frame(inf_cpm_s, gt_inf_s)
-
-pomocny_df$x <- rnorm(nrow(pomocny_df))
-
-jotest <- urca::ca.jo(pomocny_df, type = "trace", K = 5, ecdet = "none", spec = "transitory")
-summary(jotest)
-restrikce <- c(-1, 1, 3)
-summary(urca::bh5lrtest(jotest, H = restrikce, r = 2))
-
-for (i in 1:100){
-  try(print(summary(bh5lrtest(jotest, H = restrikce, r = i))))
-  print(i)
-}
-
 # 4.2) granger causality
 
 
 gt_inf_s <- ts(gt_inf_s, frequency = 12, start = c(rok, mesic + 1))
 lmtest::grangertest(inf_cpm_s, gt_inf_s, order = 3)
-lmtest::grangertest(gt_inf_s, inf_cpm_s, order = 3)
+
 
 
 
@@ -234,6 +217,19 @@ model <- lm(inf_cpm_s ~ gt_inf_s, data = pomocny_df)
 summary(model)
 
 plot(inf_cpm_s, gt_inf_s)
+
+
+plot(gt_inf_s)
+plot(inf_cpm_s)
+
+s_gt_inf_s <- decompose(gt_inf_s, "multiplicative")$random
+plot(s_gt_inf_s)
+
+s_inf_cpm_s <- decompose(inf_cpm_s, "multiplicative")$random
+plot(s_inf_cpm_s)
+
+lmtest::grangertest(s_gt_inf_s, s_inf_cpm_s, order = 1)
+
 
 
 
@@ -330,6 +326,27 @@ colnames(matice) <- c("p", "q", "aic", "bic")
 matice
 
 
+
+# 4.1) cointegrace a johansenuv test
+
+library(urca)
+
+inf_cpm_s <- inf_cpm_s[-1]
+inf_cpm_s <- ts(inf_cpm_s, frequency = 12, start = c(rok, mesic + 1))
+
+pomocny_df <- data.frame(inf_cpm_s, gt_inf_s)
+
+pomocny_df$x <- rnorm(nrow(pomocny_df))
+
+jotest <- urca::ca.jo(pomocny_df, type = "trace", K = 5, ecdet = "none", spec = "transitory")
+summary(jotest)
+restrikce <- c(-1, 1, 3)
+summary(urca::bh5lrtest(jotest, H = restrikce, r = 2))
+
+for (i in 1:100){
+  try(print(summary(bh5lrtest(jotest, H = restrikce, r = i))))
+  print(i)
+}
 
 
 
