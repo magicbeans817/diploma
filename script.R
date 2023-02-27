@@ -231,10 +231,16 @@ plot(s_inf_cpm_s)
 lmtest::grangertest(s_gt_inf_s, s_inf_cpm_s, order = 1)
 
 
+tseries::adf.test(s_gt_inf_s[7:213])
+tseries::adf.test(s_inf_cpm_s[7:213])
 
 
 
 
+
+
+
+s_gt_inf_s[1:212]
 
 
 
