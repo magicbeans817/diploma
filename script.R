@@ -156,21 +156,20 @@ gt_inf_s <- gt_inf
 gt_inf_s
 gt_inf_s <- gt_inf_s / mean(gt_inf_s) * mean(inf_cpm_s)
 gt_inf_s 
-gt_inf_s <- gt_inf_s[-1] 
 gt_inf_s <- ts(gt_inf_s, frequency = 12, start = c(rok, mesic + 1))
 
-model <- lm(inf_classic_fd ~ gt_inf_s)
+model <- lm(inf_cpm_s ~ gt_inf_s)
 summary(model)
 
 
-plot(gt_inf_s, as.vector(inf_classic_fd), xlim = c(-1,4), ylim = c(-1,4))
+plot(gt_inf_s, as.vector(inf_cpm_s), xlim = c(-1,4), ylim = c(-1,4))
 abline(model$coefficients[1], model$coefficients[2])
 
-plot(as.vector(inf_classic_fd), model$fitted.values, xlim = c(-1,3), ylim = c(-1,3))
+plot(as.vector(inf_cpm_s), model$fitted.values, xlim = c(-1,3), ylim = c(-1,3))
 abline(0, 1)
 
 
-plot.ts(inf_classic_fd, main = "Predikce a inflace")
+plot.ts(inf_cpm_s, main = "Predikce a inflace")
 x <- ts(model$fitted.values, frequency = 12, start = c(rok, mesic + 1))
 #lines(x, col = "red")
 lines(gt_inf_s, col = "blue")
@@ -213,7 +212,7 @@ lmtest::grangertest(inf_cpm_s, gt_inf_s, order = 3)
 
 
 
-model <- lm(inf_cpm_s ~ gt_inf_s, data = pomocny_df)
+model <- lm(inf_cpm_s ~ gt_inf_s)
 summary(model)
 
 plot(inf_cpm_s, gt_inf_s)
@@ -228,11 +227,84 @@ plot(s_gt_inf_s)
 s_inf_cpm_s <- decompose(inf_cpm_s, "multiplicative")$random
 plot(s_inf_cpm_s)
 
+
 lmtest::grangertest(s_gt_inf_s, s_inf_cpm_s, order = 1)
+lmtest::grangertest(s_gt_inf_s, s_inf_cpm_s, order = 2)
+
+
+length(s_inf_cpm_s)
+length(inf_cpm_s)
+length(gt_inf_s)
 
 
 tseries::adf.test(s_gt_inf_s[7:213])
 tseries::adf.test(s_inf_cpm_s[7:213])
+
+
+
+
+
+# Load the necessary packages
+library(forecast)
+
+s_inf_cpm_s <- s_inf_cpm_s[-1]
+
+# Convert the data to time series format
+ts_real_inf <- ts(data = s_inf_cpm_s, start = c(2004, 1), frequency = 12)
+ts_gt_inf <- ts(data = s_gt_inf_s, start = c(2004, 1), frequency = 12)
+
+# Fit the ARIMA(1,1,0) model to the data
+arima_model <- Arima(ts_real_inf, order = c(1,1,0), xreg = as.matrix(data.frame(ts_real_inf, s_gt_inf = ts_gt_inf)[, "s_gt_inf"]))
+
+# Generate the forecasted values for the next 12 months
+forecast_data <- forecast(arima_model, xreg = as.matrix(data.frame(ts_real_inf, s_gt_inf = ts_gt_inf)[, "s_gt_inf"]), h = 12)
+
+# Plot the actual and forecasted values
+plot(forecast_data, main = "ARIMA(1,1,0) Forecast for Inflation",
+     xlab = "Time", ylab = "Real Inflation")
+lines(ts_real_inf, col = "blue")
+legend("topleft", legend = c("Actual", "Forecast"), lty = c(1,1), col = c("blue", "black"))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
