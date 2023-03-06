@@ -105,11 +105,8 @@ lmtest::grangertest(s_gt_inf_s, s_inf_cpm_s, order = 2)
 ######################################################################################################
 # Arima
 
-
 # Load the necessary packages
 library(forecast)
-
-
 
 # Convert the data to time series format
 ts_real_inf <- ts(data = s_inf_cpm_s, start = c(2004, 1), frequency = 12)
@@ -117,6 +114,7 @@ ts_gt_inf <- ts(data = s_gt_inf_s, start = c(2004, 1), frequency = 12)
 
 # Fit the ARIMA(1,1,0) model to the data
 arima_model <- forecast::Arima(ts_real_inf, order = c(1,1,0), xreg = ts_gt_inf)
+summary(arima_model)
 
 # Generate the fitted values
 fitted_values <- arima_model$fitted
