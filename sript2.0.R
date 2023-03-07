@@ -113,8 +113,12 @@ ts_real_inf <- ts(data = s_inf_cpm_s, start = c(2004, 1), frequency = 12)
 ts_gt_inf <- ts(data = s_gt_inf_s, start = c(2004, 1), frequency = 12)
 
 # Fit the ARIMA(1,1,0) model to the data
-arima_model <- forecast::Arima(ts_real_inf, order = c(1,1,0), xreg = ts_gt_inf)
+arima_model <- forecast::Arima(ts_real_inf, order = c(1,1,1), xreg = ts_gt_inf)
 summary(arima_model)
+
+acf(arima_model)
+pacf(arima_model)
+
 
 # Generate the fitted values
 fitted_values <- arima_model$fitted
@@ -126,6 +130,31 @@ lines(fitted_values, col = "red")
 legend("topleft", legend = c("Actual", "Fitted"), lty = c(1,1), col = c("black", "red"))
 
 
+
+######################################################################################################
+# Load the necessary packages
+library(vars)
+
+# Load the necessary packages
+library(vars)
+
+# Convert the data to time series format
+ts_real_inf <- ts(data = s_inf_cpm_s, start = c(2004, 1), frequency = 12)
+ts_gt_inf <- ts(data = s_gt_inf_s, start = c(2004, 1), frequency = 12)
+
+# Combine the time series into a matrix
+data_matrix <- cbind(ts_real_inf, ts_gt_inf)
+
+complete_matrix <- data_matrix[complete.cases(data_matrix), ]
+
+# Fit a VAR model with lag length 1
+var_model <- vars::VAR(complete_matrix, p = 1, type = "const")
+
+# Print a summary of the model
+summary(var_model)
+
+# Plot the impulse response function for the Google Trends variable
+irf_plot <- plot(vars::irf(var_model, impulse = "ts_gt_inf", response = "ts_real_inf", n.ahead = 12))
 
 
 
