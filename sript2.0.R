@@ -169,6 +169,62 @@ irf_plot <- plot(vars::irf(var_model, impulse = "ts_gt_inf", response = "ts_real
 
 
 
+
+
+
+# Create a sample data frame with some data
+set.seed(123)
+gt <- data.frame(
+  date = seq(as.Date("2000-01-01"), by = "month", length.out = 120),
+  col1 = rnorm(120),
+  col2 = rnorm(120),
+  col3 = rnorm(120)
+)
+
+
+
+# Convert each column of the data frame to a time series and remove seasonality
+for (i in 1:ncol(gt)) {
+  ts_data <- ts(gt[, i], start = c(2000, 1), frequency = 12)
+  decomp_data <- decompose(ts_data)
+  detrended_data <- decomp_data$x #+ decomp_data$trend #trend #seasonal
+  ts_detrended_data <- ts(detrended_data, start = start, end = end, frequency = 12)
+  ts_detrended_data <- ts_detrended_data[-length(ts_detrended_data)]
+  cor_value <- cor(ts_detrended_data, ts_real_inf, use = "pairwise.complete.obs")
+  print(paste0("Correlation for column ", i - 1, ": ", cor_value))
+  print(ts_detrended_data[1:30])
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 gt_inf_s <- s_gt_inf
 gt_inf_s
 gt_inf_s <- gt_inf_s / mean(gt_inf_s) * mean(inf_cpm_s)
