@@ -1,0 +1,19 @@
+https://trends.google.com/trends/explore?q=inflace&date=2004-01-01%202022-04-30&geo=CZ&hl=cs
+
+f12
+
+vlezu do networku
+
+dam f5
+
+scrolluju na prvni request
+
+prave tlacitko mysi + copy curl POSIX
+
+pak vezmu nasledujici odkaz https://curlconverter.com/
+
+insertnu to, co ma zkopirovany
+
+zkopiruju celej header a premazu?
+
+odkomentovat cookie
