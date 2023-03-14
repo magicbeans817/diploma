@@ -157,32 +157,6 @@ summary(var_model)
 irf_plot <- plot(vars::irf(var_model, impulse = "ts_gt_inf", response = "ts_real_inf", n.ahead = 12))
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# Create a sample data frame with some data
-set.seed(123)
-gt <- data.frame(
-  date = seq(as.Date("2000-01-01"), by = "month", length.out = 120),
-  col1 = rnorm(120),
-  col2 = rnorm(120),
-  col3 = rnorm(120)
-)
-
-
-
 # Convert each column of the data frame to a time series and remove seasonality
 for (i in 1:ncol(gt)) {
   ts_data <- ts(gt[, i], start = c(2000, 1), frequency = 12)
@@ -224,7 +198,7 @@ for (i in 1:ncol(gt)) {
 
 
 
-
+# Nahodny nesmysly
 gt_inf_s <- s_gt_inf
 gt_inf_s
 gt_inf_s <- gt_inf_s / mean(gt_inf_s) * mean(inf_cpm_s)
