@@ -64,7 +64,7 @@ end   <- c(2022, 4)
 
 
 
-gt_inf   <- ts(gt$inflace, frequency = 12, start = start)
+gt_inf   <- ts(gt$cena, frequency = 12, start = start)
 plot(gt_inf)
 tseries::adf.test(gt_inf)
 
@@ -101,7 +101,25 @@ plot(s_gt_inf_s)
 lmtest::grangertest(s_gt_inf_s, s_inf_cpm_s, order = 1)
 lmtest::grangertest(s_gt_inf_s, s_inf_cpm_s, order = 2)
 
+lmtest::grangertest(s_inf_cpm_s, s_gt_inf_s, order = 1)
+lmtest::grangertest(s_inf_cpm_s, s_gt_inf_s, order = 2)
 
+
+######################################################################################################
+# Additional regressor hovna
+gt_cena   <- ts(gt$prices, frequency = 12, start = start)
+plot(gt_cena)
+tseries::adf.test(gt_cena)
+
+s_gt_cena <- decompose(gt_cena, "multiplicative")$random
+s_gt_cena_s <- ts(s_gt_cena, frequency = 12, start = c(rok, mesic + 1), end = end)
+
+
+
+
+regresory <- as.data.frame(matrix(c(s_gt_inf_s, s_gt_cena_s), ncol = 2))
+regresory <- data.frame(lapply(regresory, as.numeric))
+regresory <- as.matrix(regresory)
 ######################################################################################################
 # Arima
 
@@ -113,7 +131,10 @@ ts_real_inf <- ts(data = s_inf_cpm_s, start = c(2004, 1), frequency = 12)
 ts_gt_inf <- ts(data = s_gt_inf_s, start = c(2004, 1), frequency = 12)
 
 # Fit the ARIMA(1,1,0) model to the data
-arima_model <- forecast::Arima(ts_real_inf, order = c(1,1,1), xreg = ts_gt_inf)
+arima_model <- forecast::Arima(ts_real_inf, order = c(1,1,1), xreg = s_gt_inf_s)#, #ts_gt_inf)
+summary(arima_model)
+
+arima_model <- forecast::Arima(ts_real_inf, order = c(1,1,1))
 summary(arima_model)
 
 acf(arima_model)
