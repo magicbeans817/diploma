@@ -286,6 +286,25 @@ legend("topleft", legend = c("Actual", "Forecast"), lty = c(1,1), col = c("blue"
 
 
 
+# Load required packages
+install.packages("forecast")
+library(forecast)
+
+# Generate sample data
+set.seed(123)
+n <- 100
+y <- ts(rnorm(n))
+x1 <- rnorm(n)
+x2 <- rnorm(n)
+
+# Create a matrix of additional regressors
+X <- cbind(x1, x2)
+
+# Fit the ARIMA model with additional regressors
+arima_model <- auto.arima(y, xreg = X)
+
+# Display the model
+print(arima_model)
 
 
 
