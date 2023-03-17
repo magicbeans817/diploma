@@ -156,7 +156,7 @@ ts_real_inf <- ts(data = s_inf_cpm_s, start = c(2004, 1), frequency = 12)
 
 ar <- 1
 d  <- 1
-ma <- 1
+ma <- 1 #jednicka idealni
 
 # Srovnani s arimou bez external regresoru
 
@@ -170,7 +170,13 @@ for (i in 1:ncol(gt_dss)) {
     arima_model <- forecast::Arima(ts_real_inf, order = c(ar,d,ma))
     
     ssm <- matrix(c("originalni model", NA, arima_model$aic, arima_model$aicc, arima_model$bic), nrow = 1)
-    colnames(ssm) <- c("promenna", "p - hodnota", "AIC","AICc","BIC")
+    colnames(ssm) <- c("promenna", "p-value", "AIC","AICc","BIC")
+    
+    plot(ts_real_inf, main = paste("ARIMA(",ar,",",d,",",ma,") Fitted Values for Inflation"),
+         xlab = "Time", ylab = b)
+    lines(fitted_values, col = "red")
+    legend("topleft", legend = c("Actual", "Fitted", as.character(end)), lty = c(1,1), col = c("black", "red", "blue", "blue", "purple", "purple"))
+    
   }
   
   
@@ -185,6 +191,10 @@ for (i in 1:ncol(gt_dss)) {
   ss <- co/ se_coef
   p_value <- round(2 * (1 - pnorm(abs(ss))), digits = 4)
   print(p_value)
+  
+  
+  
+  
   if (p_value < 0.1){
     
     pocet_ss <- pocet_ss + 1
@@ -196,7 +206,7 @@ for (i in 1:ncol(gt_dss)) {
     
     
     #grafika
-    fitted_values <- arima_model$fitted
+    
     # Generate the fitted values
     fitted_values <- arima_model$fitted
     
@@ -212,6 +222,7 @@ for (i in 1:ncol(gt_dss)) {
   if (i ==ncol(gt_dss)){
     print(paste("Pocet statisticky signifikantnich promennych je", pocet_ss))
     print(ssm)
+
   }
 }
 
