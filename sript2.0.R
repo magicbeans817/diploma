@@ -144,12 +144,6 @@ for (i in 1:length(pca$sdev)) {
 }
 
 gt_dss <- cbind(gt_dss, pca$x[,c(1:index)])
-View(gt_dss)
-
-
-
-
-
 
 
 ######################################################################################################
@@ -159,23 +153,47 @@ View(gt_dss)
 # Convert the data to time series format
 ts_real_inf <- ts(data = s_inf_cpm_s, start = c(2004, 1), frequency = 12)
 
-pocet_ss <- 0
+
+ar <- 1
+d  <- 1
+ma <- 1
+
+# Srovnani s arimou bez external regresoru
+
+arima_model <- forecast::Arima(ts_real_inf, order = c(ar,d,ma))
+summary(arima_model) %>% print
+
 for (i in 1:ncol(gt_dss)) {
+  if (i == 1){
+    pocet_ss <- 0
+    
+    arima_model <- forecast::Arima(ts_real_inf, order = c(ar,d,ma))
+    
+    ssm <- matrix(c("originalni model", NA, arima_model$aic, arima_model$aicc, arima_model$bic), nrow = 1)
+    colnames(ssm) <- c("promenna", "p - hodnota", "AIC","AICc","BIC")
+  }
+  
+  
   print(i)
   regresor <- ts(data = gt_dss[,i], start = c(2004, 1), end = end, frequency = 12)
   regresor <- regresor / mean(regresor) * mean(ts_real_inf)
-  arima_model <- forecast::Arima(ts_real_inf, order = c(1,1,1), xreg = regresor)
+  arima_model <- forecast::Arima(ts_real_inf, order = c(ar,d,ma), xreg = regresor)
   summary(arima_model) %>% print
   
-  se_coef <- sqrt(diag(arima_model$var.coef))[3]
-  co <- arima_model$coef[3]
-  ss <- round(co/ se_coef, digits = 2)
+  se_coef <- sqrt(diag(arima_model$var.coef))["xreg"]
+  co <- arima_model$coef["xreg"]
+  ss <- co/ se_coef
   p_value <- round(2 * (1 - pnorm(abs(ss))), digits = 4)
   print(p_value)
   if (p_value < 0.1){
+    
     pocet_ss <- pocet_ss + 1
     b <- colnames(gt_dss)[i]
     cat(red(b))
+    
+    informace <- c(as.character(colnames(gt_dss)[i]), p_value, arima_model$aic, arima_model$aicc, arima_model$bic)
+    ssm <- rbind(ssm, informace)
+    
     
     #grafika
     fitted_values <- arima_model$fitted
@@ -183,7 +201,7 @@ for (i in 1:ncol(gt_dss)) {
     fitted_values <- arima_model$fitted
     
     # Plot the actual and fitted values
-    plot(ts_real_inf, main = "ARIMA(1,1,1) Fitted Values for Inflation",
+    plot(ts_real_inf, main = paste("ARIMA(",ar,",",d,",",ma,") Fitted Values for Inflation"),
          xlab = "Time", ylab = b)
     lines(fitted_values, col = "red")
     legend("topleft", legend = c("Actual", "Fitted", as.character(p_value), 
@@ -191,14 +209,11 @@ for (i in 1:ncol(gt_dss)) {
   } else {
     print(colnames(gt_dss)[i])
   }
+  if (i ==ncol(gt_dss)){
+    print(paste("Pocet statisticky signifikantnich promennych je", pocet_ss))
+    print(ssm)
+  }
 }
-
-print(pocet_ss)
-
-
-
-
-
 
 
 
@@ -239,7 +254,14 @@ irf_plot <- plot(vars::irf(var_model, impulse = "ts_gt_inf", response = "ts_real
 
 
 
+data1 <- data.frame(A = 1:3, B = 4:6)
+data2 <- data.frame(A = 7:9, B = 10:12)
 
+# Use rbind() to combine the data frames by rows
+combined_data <- rbind(data1, data2)
+
+# Print the combined data frame
+print(combined_data)
 
 
 
