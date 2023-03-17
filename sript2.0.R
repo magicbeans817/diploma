@@ -6,6 +6,10 @@ library(tseries)
 library(stringr)
 library(lmtest)
 library(rugarch)
+library(xts)
+library(stats)
+library(crayon)
+
 
 
 rm(list = ls())
@@ -48,11 +52,12 @@ plot(inf_cpm)
 
 ######################################################################################################
 # 2) Google trends data
-
 gt <- read.csv("search_trends.csv", row.names = 1)
 gt %>% head
 gt%>% dim
 
+rownm <- as.Date(rownames(gt), format = "%Y-%d-%m")
+rownm <- format(rownm, "%Y-%m-%d")
 start <- rownames(gt)[1]
 rok   <- as.numeric(substr(start, 1, 4))
 mesic <- as.numeric(substr(start, 6, 7))
@@ -61,65 +66,78 @@ print(start)
 end   <- c(2022, 4)
 
 
+# Convert all columns to numeric
+gt_numeric <- data.frame(lapply(gt, as.numeric))
+
+# Remove seasonality from the data
+gt_deseasonalized <- data.frame(lapply(gt_numeric, function(x) {
+  stl_model <- stl(ts(x, frequency = 12), s.window = "periodic")
+  deseasonalized <- stl_model$time.series[, "remainder"]
+  return(deseasonalized)
+}))
+
+# Print the deseasonalized data
+row.names(gt_deseasonalized) <- rownm
+print(gt_deseasonalized)
+
+for (i in 1:ncol(gt_deseasonalized)) {
+  plot(gt_deseasonalized[,i], ylab = colnames(gt_deseasonalized)[i])
+  tseries::adf.test(gt_deseasonalized[,i])
+}
 
 
+head(gt_deseasonalized)
+tail(gt_deseasonalized)
 
-gt_inf   <- ts(gt$cena, frequency = 12, start = start)
-plot(gt_inf)
-tseries::adf.test(gt_inf)
+gt_dss <- gt_deseasonalized
+gt_dss <- as.matrix(gt_dss)
 
 
 ######################################################################################################
 # Seasonality
 
 
-s_inf_cpm <- decompose(inf_cpm, "multiplicative")$random
-plot(s_inf_cpm)
+ts_data <- na.omit(inf_cpm)
 
-s_gt_inf <- decompose(gt_inf, "multiplicative")$random
-plot(s_gt_inf)
+
+
+ts_decomposed <- stl(ts_data, s.window = "periodic")
+
+# Subtract the seasonal component from the original time series to create the deseasonalized time series
+ts_deseasonalized <- ts_data - ts_decomposed$time.series[, "seasonal"]
+
+# Plot the original time series and the deseasonalized time series
+par(mfrow = c(2, 1))
+plot(ts_data, main = "Original Time Series")
+plot(ts_deseasonalized, main = "Deseasonalized Time Series")
 
 
 ######################################################################################################
 # Subsetting, Granger, adjustment of GT
 
-s_inf_cpm_s <- ts(s_inf_cpm, frequency = 12, start = c(rok, mesic + 1), end = end)
-s_gt_inf_s <- ts(s_gt_inf, frequency = 12, start = c(rok, mesic + 1), end = end)
+s_inf_cpm_s <- window(ts_deseasonalized, frequency = 12, start = c(rok, mesic), end = end)
 
-length(s_inf_cpm_s)
-length(s_gt_inf_s)
-
-s_gt_inf_s <- s_gt_inf_s / mean(s_gt_inf_s, na.rm = TRUE) * mean(s_inf_cpm_s, na.rm = TRUE)
-
-
-s_inf_cpm_s
-s_gt_inf_s
-
-plot(s_inf_cpm_s)
-plot(s_gt_inf_s)
-
-lmtest::grangertest(s_gt_inf_s, s_inf_cpm_s, order = 1)
-lmtest::grangertest(s_gt_inf_s, s_inf_cpm_s, order = 2)
-
-lmtest::grangertest(s_inf_cpm_s, s_gt_inf_s, order = 1)
-lmtest::grangertest(s_inf_cpm_s, s_gt_inf_s, order = 2)
+for (i in 1:ncol(gt_dss)) {
+  x <- ts(gt_dss[, i], start = start, frequency = 12)
+  for (j in 1:3) {
+    lmtest::grangertest(s_inf_cpm_s, x, order = j) %>% print
+    print(colnames(gt_dss)[i])
+  }
+}
 
 
 ######################################################################################################
-# Additional regressor hovna
-gt_cena   <- ts(gt$prices, frequency = 12, start = start)
-plot(gt_cena)
-tseries::adf.test(gt_cena)
-
-s_gt_cena <- decompose(gt_cena, "multiplicative")$random
-s_gt_cena_s <- ts(s_gt_cena, frequency = 12, start = c(rok, mesic + 1), end = end)
 
 
 
 
-regresory <- as.data.frame(matrix(c(s_gt_inf_s, s_gt_cena_s), ncol = 2))
-regresory <- data.frame(lapply(regresory, as.numeric))
-regresory <- as.matrix(regresory)
+
+
+
+
+
+
+
 ######################################################################################################
 # Arima
 
@@ -128,10 +146,42 @@ library(forecast)
 
 # Convert the data to time series format
 ts_real_inf <- ts(data = s_inf_cpm_s, start = c(2004, 1), frequency = 12)
+
+for (i in 1:ncol(gt_dss)) {
+  print(i)
+  regresor <- ts(data = gt_dss[,i], start = c(2004, 1), frequency = 12)
+  arima_model <- forecast::Arima(ts_real_inf, order = c(1,1,1), xreg = regresor)
+  summary(arima_model) %>% print
+  
+  se_coef <- sqrt(diag(arima_model$var.coef))[3]
+  co <- arima_model$coef[3]
+  ss <- round(co/ se_coef, digits = 2)
+  print(ss)
+  if (abs(ss) > 1.95){
+    b <- colnames(gt_dss)[i]
+    cat(red(b))
+    
+    #grafika
+    fitted_values <- arima_model$fitted
+    # Generate the fitted values
+    fitted_values <- arima_model$fitted
+    
+    # Plot the actual and fitted values
+    plot(ts_real_inf, main = "ARIMA(1,1,1) Fitted Values for Inflation",
+         xlab = "Time", ylab = b)
+    lines(fitted_values, col = "red")
+    legend("topleft", legend = c("Actual", "Fitted"), lty = c(1,1), col = c("black", "red"))
+  }
+}
+
+
+
+
+
 ts_gt_inf <- ts(data = s_gt_inf_s, start = c(2004, 1), frequency = 12)
 
 # Fit the ARIMA(1,1,0) model to the data
-arima_model <- forecast::Arima(ts_real_inf, order = c(1,1,1), xreg = s_gt_inf_s)#, #ts_gt_inf)
+arima_model <- forecast::Arima(ts_real_inf, order = c(1,1,1), xreg = gt_dss)
 summary(arima_model)
 
 arima_model <- forecast::Arima(ts_real_inf, order = c(1,1,1))
