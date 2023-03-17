@@ -63,7 +63,7 @@ rok   <- as.numeric(substr(start, 1, 4))
 mesic <- as.numeric(substr(start, 6, 7))
 start <- c(rok, mesic)
 print(start)
-end   <- c(2022, 4)
+end   <- c(2023, 2)
 
 
 # Convert all columns to numeric
@@ -94,7 +94,7 @@ gt_dss <- as.matrix(gt_dss)
 
 
 ######################################################################################################
-# Seasonality
+# Seasonality u inflace
 
 
 ts_data <- na.omit(inf_cpm)
@@ -147,14 +147,14 @@ ts_real_inf <- ts(data = s_inf_cpm_s, start = c(2004, 1), frequency = 12)
 pocet_ss <- 0
 for (i in 1:ncol(gt_dss)) {
   print(i)
-  regresor <- ts(data = gt_dss[,i], start = c(2004, 1), frequency = 12)
+  regresor <- ts(data = gt_dss[,i], start = c(2004, 1), end = end, frequency = 12)
   arima_model <- forecast::Arima(ts_real_inf, order = c(1,1,1), xreg = regresor)
   summary(arima_model) %>% print
   
   se_coef <- sqrt(diag(arima_model$var.coef))[3]
   co <- arima_model$coef[3]
   ss <- round(co/ se_coef, digits = 2)
-  p_value <- 2 * (1 - pnorm(abs(ss)))
+  p_value <- round(2 * (1 - pnorm(abs(ss))), digits = 4)
   print(p_value)
   if (p_value < 0.1){
     pocet_ss <- pocet_ss + 1
@@ -170,7 +170,8 @@ for (i in 1:ncol(gt_dss)) {
     plot(ts_real_inf, main = "ARIMA(1,1,1) Fitted Values for Inflation",
          xlab = "Time", ylab = b)
     lines(fitted_values, col = "red")
-    legend("topleft", legend = c("Actual", "Fitted"), lty = c(1,1), col = c("black", "red"))
+    legend("topleft", legend = c("Actual", "Fitted", as.character(p_value), 
+                                 as.character(b), as.character(end)), lty = c(1,1), col = c("black", "red", "blue", "red", "purple", "purple"))
   }
 }
 
@@ -187,12 +188,15 @@ print(pocet_ss)
 # VAR model
 
 
-
-
 for (i in 1:ncol(gt_dss)) {
   print(i)
+  b <- colnames(gt_dss)[i]
+  print(b)
+  
+  var_regresor <- ts(gt_dss[,i], start = start, frequency = 12)
+  var_regresor <- window(var_regresor, start = start, end = end, frequency = 12)
   for (j in 1:1) {
-    data_matrix <- cbind(ts_real_inf, gt_dss[,i])
+    data_matrix <- cbind(ts_real_inf, var_regresor)
     complete_matrix <- data_matrix[complete.cases(data_matrix), ]
     var_model <- vars::VAR(complete_matrix, p = j, type = "const")
     summary(var_model) %>% print
