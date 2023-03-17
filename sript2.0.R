@@ -63,7 +63,7 @@ rok   <- as.numeric(substr(start, 1, 4))
 mesic <- as.numeric(substr(start, 6, 7))
 start <- c(rok, mesic)
 print(start)
-end   <- c(2023, 2)
+end   <- c(2022, 2)
 
 
 # Convert all columns to numeric
@@ -128,8 +128,23 @@ for (i in 1:ncol(gt_dss)) {
 
 
 ######################################################################################################
+# PCA
 
+pca <- prcomp(gt_dss, scale. = TRUE)
 
+# Print PCA results (eigenvalues, eigenvectors, and standard deviations)
+print(pca)
+
+index <- 0
+for (i in 1:length(pca$sdev)) {
+  print(i)
+  if (pca$sdev[i] > 1){
+    index <- index + 1
+  }
+}
+
+gt_dss <- cbind(gt_dss, pca$x[,c(1:index)])
+View(gt_dss)
 
 
 
@@ -148,6 +163,7 @@ pocet_ss <- 0
 for (i in 1:ncol(gt_dss)) {
   print(i)
   regresor <- ts(data = gt_dss[,i], start = c(2004, 1), end = end, frequency = 12)
+  regresor <- regresor / mean(regresor) * mean(ts_real_inf)
   arima_model <- forecast::Arima(ts_real_inf, order = c(1,1,1), xreg = regresor)
   summary(arima_model) %>% print
   
@@ -172,6 +188,8 @@ for (i in 1:ncol(gt_dss)) {
     lines(fitted_values, col = "red")
     legend("topleft", legend = c("Actual", "Fitted", as.character(p_value), 
                                  as.character(b), as.character(end)), lty = c(1,1), col = c("black", "red", "blue", "red", "purple", "purple"))
+  } else {
+    print(colnames(gt_dss)[i])
   }
 }
 
