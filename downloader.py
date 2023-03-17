@@ -48,7 +48,7 @@ class TrendReq(UTrendReq):
         return super()._get_data(url, method=GET_METHOD, trim_chars=trim_chars, headers=headers, **kwargs)
 
 
-pytrend = TrendReq(hl='de-DE', tz=360)  # tady je jazyk - en-GB je birtska anglictina, en-US americka
+pytrend = TrendReq(hl='cz-CZ', tz=360)  # tady je jazyk - en-GB je birtska anglictina, en-US americka
 
 colnames = ["keywords"]
 df = pd.read_csv("keyword_list.csv", names=colnames)
@@ -64,8 +64,8 @@ for x in range(0,len(df2)):
      pytrend.build_payload(
      kw_list=keywords,
      cat=0,
-     timeframe=  '2004-01-01 2022-04-30', # casovy interval sberu, format je rok-mesic-den
-     geo='DE') # geopoliticka oblast, GB je Velka Britanie, US Spojene Staty
+     timeframe=  '2004-01-01 2023-02-28', # casovy interval sberu, format je rok-mesic-den
+     geo='CZ') # geopoliticka oblast, GB je Velka Britanie, US Spojene Staty
      data = pytrend.interest_over_time()
      if not data.empty:
           data = data.drop(labels=['isPartial'],axis='columns')
