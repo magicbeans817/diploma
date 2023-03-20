@@ -163,14 +163,23 @@ ma <- 1 #jednicka idealni
 arima_model <- forecast::Arima(ts_real_inf, order = c(ar,d,ma))
 summary(arima_model) %>% print
 
+
+for (ar in 1:3) {
+for (d in 0:2) {
+for (ma in 1:3) {
 for (i in 1:ncol(gt_dss)) {
   if (i == 1){
-    pocet_ss <- 0
     
     arima_model <- forecast::Arima(ts_real_inf, order = c(ar,d,ma))
     
-    ssm <- matrix(c("originalni model", NA, arima_model$aic, arima_model$aicc, arima_model$bic), nrow = 1)
-    colnames(ssm) <- c("promenna", "p-value", "AIC","AICc","BIC")
+    if (ar == 1 & d == 0 & ma ==1) {
+    ssm <- matrix(c("originalni model", NA, arima_model$aic, arima_model$aicc, arima_model$bic, ar, d, ma), nrow = 1)
+    colnames(ssm) <- c("promenna", "p-value", "AIC","AICc","BIC", "AR", "I", "MA")
+    
+    pocet_ss <- 0
+    }
+    
+
     
     plot(ts_real_inf, main = paste("ARIMA(",ar,",",d,",",ma,") Fitted Values for Inflation"),
          xlab = "Time", ylab = colnames(gt_dss)[i])
@@ -239,7 +248,7 @@ for (i in 1:ncol(gt_dss)) {
     b <- colnames(gt_dss)[i]
     cat(red(b))
     
-    informace <- c(as.character(colnames(gt_dss)[i]), p_value, arima_model$aic, arima_model$aicc, arima_model$bic)
+    informace <- c(as.character(colnames(gt_dss)[i]), p_value, arima_model$aic, arima_model$aicc, arima_model$bic, ar, d, ma)
     ssm <- rbind(ssm, informace)
     
     
@@ -264,8 +273,9 @@ for (i in 1:ncol(gt_dss)) {
 
   }
 }
-
-
+}
+}
+}
 
 ######################################################################################################
 # VAR model
@@ -285,7 +295,6 @@ for (i in 1:ncol(gt_dss)) {
     summary(var_model) %>% print
   }
 }
-
 
 
 summary(var_model)
