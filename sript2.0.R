@@ -63,7 +63,7 @@ rok   <- as.numeric(substr(start, 1, 4))
 mesic <- as.numeric(substr(start, 6, 7))
 start <- c(rok, mesic)
 print(start)
-end   <- c(2022, 2)
+end   <- c(2019, 12)
 
 
 # Convert all columns to numeric
@@ -107,7 +107,7 @@ ts_decomposed <- stl(ts_data, s.window = "periodic")
 ts_deseasonalized <- ts_data - ts_decomposed$time.series[, "seasonal"]
 
 # Plot the original time series and the deseasonalized time series
-par(mfrow = c(2, 1))
+#par(mfrow = c(2, 1))
 plot(ts_data, main = "Original Time Series")
 plot(ts_deseasonalized, main = "Deseasonalized Time Series")
 
@@ -173,31 +173,69 @@ for (i in 1:ncol(gt_dss)) {
     colnames(ssm) <- c("promenna", "p-value", "AIC","AICc","BIC")
     
     plot(ts_real_inf, main = paste("ARIMA(",ar,",",d,",",ma,") Fitted Values for Inflation"),
-         xlab = "Time", ylab = b)
+         xlab = "Time", ylab = colnames(gt_dss)[i])
+    fitted_values <- arima_model$fitted
     lines(fitted_values, col = "red")
     legend("topleft", legend = c("Actual", "Fitted", as.character(end)), lty = c(1,1), col = c("black", "red", "blue", "blue", "purple", "purple"))
     
   }
   
-  
+
   print(i)
   regresor <- ts(data = gt_dss[,i], start = c(2004, 1), end = end, frequency = 12)
   regresor <- regresor / mean(regresor) * mean(ts_real_inf)
-  arima_model <- forecast::Arima(ts_real_inf, order = c(ar,d,ma), xreg = regresor)
+  
+  opposite_lag <- function(x, k) {
+    c(tail(x, -k), rep(NA, k))
+  }
+  ext_regressor <- regresor
+  future_values <- opposite_lag(ext_regressor, 1)
+  
+  # Combine the original external regressor and its future values into a matrix
+  ext_regressors <- cbind(ext_regressor, future_values)
+  colnames(ext_regressors) <- c("ext_regressor", "future_values")
+  
+  # Remove the last row, as it contains NA for future_values
+  ext_regressors <- ts(future_values[-length(future_values)], start = start, frequency = 12) #ext_regressors[-nrow(ext_regressors), ]
+  
+  # Remove the last observation from the data as well
+  ts_real_inf_2 <- ts_real_inf[-length(ts_real_inf)]
+  ts_real_inf_2 <- ts(ts_real_inf_2, start = start, frequency = 12)
+  
+  
+  arima_model <- try(forecast::Arima(ts_real_inf_2, order = c(ar,d,ma), xreg = ext_regressors))
+  #arima_model <- try(forecast::Arima(ts_real_inf, order = c(ar,d,ma), xreg = regresor))
+  # Check if there was an error
+  if (!inherits(arima_model, "try-error")) {
+    # Store the ARIMA model in the list if no error occurred
+  } else {
+    # Print a message and continue to the next iteration if an error occurred
+    cat("Error encountered for ARIMA(", i, ", 0, 0). Skipping this model.\n")
+    next  # Continue to the next iteration
+  }
+  
+
   summary(arima_model) %>% print
   
   se_coef <- sqrt(diag(arima_model$var.coef))["xreg"]
   co <- arima_model$coef["xreg"]
   ss <- co/ se_coef
-  p_value <- round(2 * (1 - pnorm(abs(ss))), digits = 4)
+  if (is.nan(se_coef) == TRUE | is.nan(co) == TRUE) {
+    p_value <- 1 
+  } else {
+    p_value <- round(2 * (1 - pnorm(abs(ss))), digits = 4) 
+  }
+
+  print("p_value")
   print(p_value)
+  #if (p_value)
   
   
   
-  
-  if (p_value < 0.1){
+  if (p_value < 0.1 ) {
     
     pocet_ss <- pocet_ss + 1
+    print(i)
     b <- colnames(gt_dss)[i]
     cat(red(b))
     
@@ -215,7 +253,8 @@ for (i in 1:ncol(gt_dss)) {
          xlab = "Time", ylab = b)
     lines(fitted_values, col = "red")
     legend("topleft", legend = c("Actual", "Fitted", as.character(p_value), 
-                                 as.character(b), as.character(end)), lty = c(1,1), col = c("black", "red", "blue", "red", "purple", "purple"))
+                                 as.character(b), 
+                                 as.character(end)), lty = c(1,1), col = c("black", "red", "blue", "red", "purple", "purple"))
   } else {
     print(colnames(gt_dss)[i])
   }
