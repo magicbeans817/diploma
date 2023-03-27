@@ -161,34 +161,17 @@ ma <- 1 #jednicka idealni
 # Srovnani s arimou bez external regresoru
 
 arima_model <- forecast::Arima(ts_real_inf, order = c(ar,d,ma))
-summary(arima_model) %>% print
+ssm <- matrix(c("originalni model", NA, arima_model$aic, arima_model$aicc, arima_model$bic, ar, d, ma), nrow = 1)
+colnames(ssm) <- c("promenna", "p-value", "AIC","AICc","BIC", "AR", "I", "MA")
+
+pocet_ss <- 0
 
 
 for (ar in 1:3) {
 for (d in 0:2) {
 for (ma in 1:3) {
 for (i in 1:ncol(gt_dss)) {
-  if (i == 1){
-    
-    arima_model <- forecast::Arima(ts_real_inf, order = c(ar,d,ma))
-    
-    if (ar == 1 & d == 0 & ma ==1) {
-    ssm <- matrix(c("originalni model", NA, arima_model$aic, arima_model$aicc, arima_model$bic, ar, d, ma), nrow = 1)
-    colnames(ssm) <- c("promenna", "p-value", "AIC","AICc","BIC", "AR", "I", "MA")
-    
-    pocet_ss <- 0
-    }
-    
 
-    
-    plot(ts_real_inf, main = paste("ARIMA(",ar,",",d,",",ma,") Fitted Values for Inflation"),
-         xlab = "Time", ylab = colnames(gt_dss)[i])
-    fitted_values <- arima_model$fitted
-    lines(fitted_values, col = "red")
-    legend("topleft", legend = c("Actual", "Fitted", as.character(end)), lty = c(1,1), col = c("black", "red", "blue", "blue", "purple", "purple"))
-    
-  }
-  
 
   print(i)
   regresor <- ts(data = gt_dss[,i], start = c(2004, 1), end = end, frequency = 12)
@@ -343,7 +326,19 @@ gt_inf_s <- ts(gt_inf_s, frequency = 12, start = c(rok, mesic + 1))
 
 
 
-
+'''
+  if (i == 1){
+    
+    arima_model <- forecast::Arima(ts_real_inf, order = c(ar,d,ma))
+    
+    plot(ts_real_inf, main = paste("ARIMA(",ar,",",d,",",ma,") Fitted Values for Inflation"),
+         xlab = "Time", ylab = colnames(gt_dss)[i])
+    fitted_values <- arima_model$fitted
+    lines(fitted_values, col = "red")
+    legend("topleft", legend = c("Actual", "Fitted", as.character(end)), lty = c(1,1), col = c("black", "red", "blue", "blue", "purple", "purple"))
+    
+  }
+  '''
 
 
 
