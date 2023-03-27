@@ -161,42 +161,62 @@ ma <- 1 #jednicka idealni
 # Srovnani s arimou bez external regresoru
 
 arima_model <- forecast::Arima(ts_real_inf, order = c(ar,d,ma))
-ssm <- matrix(c("originalni model", NA, arima_model$aic, arima_model$aicc, arima_model$bic, ar, d, ma), nrow = 1)
-colnames(ssm) <- c("promenna", "p-value", "AIC","AICc","BIC", "AR", "I", "MA")
+ssm <- matrix(c("originalni model", NA, arima_model$aic, arima_model$aicc, arima_model$bic, ar, d, ma, "lag"), nrow = 1)
+colnames(ssm) <- c("promenna", "p-value", "AIC","AICc","BIC", "AR", "I", "MA", "lag")
 
 pocet_ss <- 0
 
+opposite_lag <- function(x, k) {
+  c(tail(x, -k), rep(NA, k))
+}
 
+# Remove the last observation from the data as well
+ts_real_inf_2 <- ts_real_inf[-length(ts_real_inf)]
+ts_real_inf_2 <- ts(ts_real_inf_2, start = start, frequency = 12)
+
+cifry <- 9
+
+
+######################################################################################################
 for (ar in 1:3) {
 for (d in 0:2) {
 for (ma in 1:3) {
 for (i in 1:ncol(gt_dss)) {
 
-
   print(i)
+  
   regresor <- ts(data = gt_dss[,i], start = c(2004, 1), end = end, frequency = 12)
   regresor <- regresor / mean(regresor) * mean(ts_real_inf)
   
-  opposite_lag <- function(x, k) {
-    c(tail(x, -k), rep(NA, k))
-  }
-  ext_regressor <- regresor
-  future_values <- opposite_lag(ext_regressor, 1)
+  for (promenna in c("regresor","delay")) {
+    
+    rozeznani_do_tabulky <- promenna
+    
+    if (promenna == "regresor") {
+      
+      arima_model <- try(forecast::Arima(ts_real_inf, order = c(ar,d,ma), xreg = regresor))
+      
+      
+    } else {
+      
+      ext_regressor <- regresor
+      future_values <- opposite_lag(ext_regressor, 1)
+      
+      # Remove the last row, as it contains NA for future_values
+      ext_regressors <- ts(future_values[-length(future_values)], start = start, frequency = 12) #ext_regressors[-nrow(ext_regressors), ]
+      
+      arima_model <- try(forecast::Arima(ts_real_inf_2, order = c(ar,d,ma), xreg = ext_regressors))
+    }
   
+  
+  # Pro pripad multiple regression
   # Combine the original external regressor and its future values into a matrix
-  ext_regressors <- cbind(ext_regressor, future_values)
-  colnames(ext_regressors) <- c("ext_regressor", "future_values")
-  
-  # Remove the last row, as it contains NA for future_values
-  ext_regressors <- ts(future_values[-length(future_values)], start = start, frequency = 12) #ext_regressors[-nrow(ext_regressors), ]
-  
-  # Remove the last observation from the data as well
-  ts_real_inf_2 <- ts_real_inf[-length(ts_real_inf)]
-  ts_real_inf_2 <- ts(ts_real_inf_2, start = start, frequency = 12)
+  #ext_regressors <- cbind(ext_regressor, future_values)
+  #colnames(ext_regressors) <- c("ext_regressor", "future_values")
   
   
-  arima_model <- try(forecast::Arima(ts_real_inf_2, order = c(ar,d,ma), xreg = ext_regressors))
-  #arima_model <- try(forecast::Arima(ts_real_inf, order = c(ar,d,ma), xreg = regresor))
+
+  #
   # Check if there was an error
   if (!inherits(arima_model, "try-error")) {
     # Store the ARIMA model in the list if no error occurred
@@ -207,31 +227,37 @@ for (i in 1:ncol(gt_dss)) {
   }
   
 
-  summary(arima_model) %>% print
   
   se_coef <- sqrt(diag(arima_model$var.coef))["xreg"]
   co <- arima_model$coef["xreg"]
   ss <- co/ se_coef
+  
   if (is.nan(se_coef) == TRUE | is.nan(co) == TRUE) {
     p_value <- 1 
   } else {
     p_value <- round(2 * (1 - pnorm(abs(ss))), digits = 4) 
   }
 
-  print("p_value")
-  print(p_value)
-  #if (p_value)
-  
-  
+
   
   if (p_value < 0.1 ) {
+    
+    print("p_value")
+    print(p_value)
+    
     
     pocet_ss <- pocet_ss + 1
     print(i)
     b <- colnames(gt_dss)[i]
     cat(red(b))
     
-    informace <- c(as.character(colnames(gt_dss)[i]), p_value, arima_model$aic, arima_model$aicc, arima_model$bic, ar, d, ma)
+
+    
+    moje_aic <- round(arima_model$aic, digits = cifry)
+    moje_aicc <- round(arima_model$aicc, digits = cifry)
+    moje_bic <- round(arima_model$bic, digits = cifry)
+    
+    informace <- c(as.character(colnames(gt_dss)[i]), p_value, moje_aic, moje_aicc, moje_bic, ar, d, ma, rozeznani_do_tabulky)
     ssm <- rbind(ssm, informace)
     
     
@@ -240,25 +266,41 @@ for (i in 1:ncol(gt_dss)) {
     # Generate the fitted values
     fitted_values <- arima_model$fitted
     
+    if (rozeznani_do_tabulky == "regresor"){
+      barvicka <- "blue"
+    } else {
+      barvicka <- "red"
+    }
+    
+    
     # Plot the actual and fitted values
     plot(ts_real_inf, main = paste("ARIMA(",ar,",",d,",",ma,") Fitted Values for Inflation"),
          xlab = "Time", ylab = b)
     lines(fitted_values, col = "red")
-    legend("topleft", legend = c("Actual", "Fitted", as.character(p_value), 
-                                 as.character(b), 
-                                 as.character(end)), lty = c(1,1), col = c("black", "red", "blue", "red", "purple", "purple"))
+    legend("topleft",
+           legend = c("Actual", "Fitted", 
+                      paste("p-value =", as.character(p_value)),
+                      paste("b =", as.character(b)),
+                      paste("end =", as.character(end)),
+                      paste("AIC =", as.character(moje_aic)),
+                      paste("AICc =", as.character(moje_aicc)),
+                      paste("BIC =", as.character(moje_bic))),
+           lty = c(1, 1),
+           col = c("black", barvicka))
+    
+    
   } else {
     print(colnames(gt_dss)[i])
   }
-  if (i ==ncol(gt_dss)){
-    print(paste("Pocet statisticky signifikantnich promennych je", pocet_ss))
-    print(ssm)
-
   }
 }
 }
 }
 }
+print(paste("Pocet statisticky signifikantnich promennych je", pocet_ss))
+print(ssm)
+
+
 
 ######################################################################################################
 # VAR model
@@ -326,7 +368,7 @@ gt_inf_s <- ts(gt_inf_s, frequency = 12, start = c(rok, mesic + 1))
 
 
 
-'''
+
   if (i == 1){
     
     arima_model <- forecast::Arima(ts_real_inf, order = c(ar,d,ma))
@@ -338,7 +380,7 @@ gt_inf_s <- ts(gt_inf_s, frequency = 12, start = c(rok, mesic + 1))
     legend("topleft", legend = c("Actual", "Fitted", as.character(end)), lty = c(1,1), col = c("black", "red", "blue", "blue", "purple", "purple"))
     
   }
-  '''
+
 
 
 
