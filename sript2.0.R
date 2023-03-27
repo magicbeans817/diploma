@@ -63,7 +63,33 @@ rok   <- as.numeric(substr(start, 1, 4))
 mesic <- as.numeric(substr(start, 6, 7))
 start <- c(rok, mesic)
 print(start)
-end   <- c(2019, 12)
+
+
+
+
+jmena_sloupecku <- c("promenna", "p-value", "AIC","AICc","BIC", "AR", "I", "MA", "lag")
+pocet_sloupecku <- length(jmena_sloupecku)
+
+
+
+tabulka_arima_modelu <- data.frame(matrix(ncol = pocet_sloupecku, nrow = 0))
+colnames(tabulka_arima_modelu) <- jmena_sloupecku
+
+my_matrix <- matrix(c(2019, 2, 2022, 2, 2023, 2), nrow = 3, ncol = 2, byrow = TRUE)
+my_matrix_n <- nrow(my_matrix)
+
+# Create an empty list to store the row vectors
+row_vectors <- vector("list", length = my_matrix_n)
+
+
+for (rocnik in 1:my_matrix_n) {
+  
+  row_vectors[[rocnik]] <- my_matrix[rocnik, ]
+  end <- row_vectors[[rocnik]]
+  print(end)
+
+
+#end   <- c(2022, 2)
 
 
 # Convert all columns to numeric
@@ -162,7 +188,7 @@ ma <- 1 #jednicka idealni
 
 arima_model <- forecast::Arima(ts_real_inf, order = c(ar,d,ma))
 ssm <- matrix(c("originalni model", NA, arima_model$aic, arima_model$aicc, arima_model$bic, ar, d, ma, "lag"), nrow = 1)
-colnames(ssm) <- c("promenna", "p-value", "AIC","AICc","BIC", "AR", "I", "MA", "lag")
+colnames(ssm) <- jmena_sloupecku
 
 pocet_ss <- 0
 
@@ -179,7 +205,7 @@ cifry <- 9
 
 ######################################################################################################
 for (ar in 1:3) {
-for (d in 0:2) {
+for (d in 0:1) {
 for (ma in 1:3) {
 for (i in 1:ncol(gt_dss)) {
 
@@ -299,8 +325,11 @@ for (i in 1:ncol(gt_dss)) {
 }
 print(paste("Pocet statisticky signifikantnich promennych je", pocet_ss))
 print(ssm)
+tabulka_arima_modelu <- rbind(tabulka_arima_modelu, ssm)
+}
 
-
+tabulka_arima_modelu
+nrow(tabulka_arima_modelu)
 
 ######################################################################################################
 # VAR model
