@@ -81,6 +81,9 @@ my_matrix_n <- nrow(my_matrix)
 # Create an empty list to store the row vectors
 row_vectors <- vector("list", length = my_matrix_n)
 
+originalni_modely <- matrix()
+colnames(originalni_modely) <- c("dAR","dI","dMA","dAIC","dAICc","dBIC") 
+
 
 for (rocnik in 1:my_matrix_n) {
   
@@ -187,12 +190,10 @@ ma <- 1 #jednicka idealni
 # Srovnani s arimou bez external regresoru
 
 arima_model <- forecast::Arima(ts_real_inf, order = c(ar,d,ma))
-ssm <- matrix(c("originalni model", NA, arima_model$aic, arima_model$aicc, arima_model$bic, ar, d, ma, "lag"), nrow = 1)
+ssm <- matrix(c("originalni model", NA, arima_model$aic, arima_model$aicc, arima_model$bic, ar, d, ma, "lag"), nrow = 1, ncol = length(jmena_sloupecku))
 colnames(ssm) <- jmena_sloupecku
 
 pocet_ss <- 0
-
-originalni_modely <-matrix()
 
 
 
@@ -288,8 +289,27 @@ for (i in 1:ncol(gt_dss)) {
     moje_bic <- round(arima_model$bic, digits = cifry)
     
     informace <- c(as.character(colnames(gt_dss)[i]), p_value, moje_aic, moje_aicc, moje_bic, ar, d, ma, rozeznani_do_tabulky)
+    
     ssm <- rbind(ssm, informace)
     
+    rownames(ssm)[nrow(ssm)] <- paste(as.character(end),as.character(i))
+    
+    
+    if (rozeznani_do_tabulky == "regresor") {
+      
+      srovnavaci_model <- try(forecast::Arima(ts_real_inf, order = c(ar,d,ma)))
+      srovnavaci_vektor <- c(ar, d, ma, srovnavaci_model$aic, srovnavaci_model$aicc, srovnavaci_model$bic)
+      originalni_modely <- rbind(originalni_modely, srovnavaci_vektor)
+        
+    } else if (rozeznani_do_tabulky == "delay") {
+      
+      srovnavaci_model <- try(forecast::Arima(ts_real_inf_2, order = c(ar,d,ma)))
+      srovnavaci_vektor <- c(ar, d, ma, srovnavaci_model$aic, srovnavaci_model$aicc, srovnavaci_model$bic)
+      originalni_modely <- rbind(originalni_modely, srovnavaci_vektor)
+      # Code to execute if condition 2 is true
+    } 
+    
+    debil <- c(ar, d, ma)
     
     #grafika
     
@@ -335,24 +355,11 @@ tabulka_arima_modelu <- rbind(tabulka_arima_modelu, ssm)
 tabulka_arima_modelu
 nrow(tabulka_arima_modelu)
 
-old_row_names <- rownames(tabulka_arima_modelu)
-
-# Create a vector of new row names with the changes you want
-new_row_names <- old_row_names
-new_row_names[old_row_names == "X"] <- "2019,12"
-new_row_names[old_row_names == "X1"] <- "2022,2"
-new_row_names[old_row_names == "X2"] <- "2023,2"
-
-# Set the new row names in the data frame
-rownames(tabulka_arima_modelu) <- new_row_names
-
-# Switching second row index with first one
-row.names(tabulka_arima_modelu) <- c(row.names(tabulka_arima_modelu)[2], row.names(tabulka_arima_modelu)[1], row.names(tabulka_arima_modelu)[-c(1,2)])
-
-# Removing first observation
-tabulka_arima_modelu <- tabulka_arima_modelu[-1, ]
-
-
+for (i in 1:nrow(tabulka_arima_modelu)) {
+  if (tabulka_arima_modelu[i, "lag"] == "lag") {
+    tabulka_arima_modelu <- tabulka_arima_modelu[-i,]
+  }
+}
 
 
 
