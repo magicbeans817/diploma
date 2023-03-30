@@ -192,6 +192,10 @@ colnames(ssm) <- jmena_sloupecku
 
 pocet_ss <- 0
 
+originalni_modely <-matrix()
+
+
+
 opposite_lag <- function(x, k) {
   c(tail(x, -k), rep(NA, k))
 }
@@ -302,7 +306,7 @@ for (i in 1:ncol(gt_dss)) {
     # Plot the actual and fitted values
     plot(ts_real_inf, main = paste("ARIMA(",ar,",",d,",",ma,") Fitted Values for Inflation"),
          xlab = "Time", ylab = b)
-    lines(fitted_values, col = "red")
+    lines(fitted_values, col = barvicka)
     legend("topleft",
            legend = c("Actual", "Fitted", 
                       paste("p-value =", as.character(p_value)),
@@ -330,6 +334,38 @@ tabulka_arima_modelu <- rbind(tabulka_arima_modelu, ssm)
 
 tabulka_arima_modelu
 nrow(tabulka_arima_modelu)
+
+old_row_names <- rownames(tabulka_arima_modelu)
+
+# Create a vector of new row names with the changes you want
+new_row_names <- old_row_names
+new_row_names[old_row_names == "X"] <- "2019,12"
+new_row_names[old_row_names == "X1"] <- "2022,2"
+new_row_names[old_row_names == "X2"] <- "2023,2"
+
+# Set the new row names in the data frame
+rownames(tabulka_arima_modelu) <- new_row_names
+
+# Switching second row index with first one
+row.names(tabulka_arima_modelu) <- c(row.names(tabulka_arima_modelu)[2], row.names(tabulka_arima_modelu)[1], row.names(tabulka_arima_modelu)[-c(1,2)])
+
+# Removing first observation
+tabulka_arima_modelu <- tabulka_arima_modelu[-1, ]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ######################################################################################################
 # VAR model
