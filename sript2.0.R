@@ -11,7 +11,7 @@ library(xts)
 library(stats)
 library(crayon)
 library(vars)
-
+library(tibble)
 
 
 
@@ -214,6 +214,11 @@ for (rocnik in 1:my_matrix_n) {
   ts_real_inf_2 <- ts_real_inf[-length(ts_real_inf)]
   ts_real_inf_2 <- ts(ts_real_inf_2, start = start, frequency = 12)
   
+  ts_real_inf_3 <- ts_real_inf[-1]
+  ts_real_inf_3 <- ts(ts_real_inf_3, start = c(start[1], (start[2] + 1)), frequency = 12)
+  
+  
+  
   cifry <- 9
   
   
@@ -228,7 +233,7 @@ for (rocnik in 1:my_matrix_n) {
           regresor <- ts(data = gt_dss[,i], start = c(2004, 1), end = end, frequency = 12)
           regresor <- regresor / mean(regresor) * mean(ts_real_inf)
           
-          for (promenna in c("regresor","delay")) {
+          for (promenna in c("regresor","delay", "posun_vpred")) {
             
             rozeznani_do_tabulky <- promenna
             
@@ -237,10 +242,23 @@ for (rocnik in 1:my_matrix_n) {
               arima_model <- try(forecast::Arima(ts_real_inf, order = c(ar,d,ma), xreg = regresor))
               
               
-            } else {
+            } else if(promenna == "delay"){
               
               ext_regressor <- regresor
-              future_values <- opposite_lag(ext_regressor, 1)
+              #future_values <- opposite_lag(ext_regressor, 1)
+              posun <- 1
+              future_values <- stats::lag(ext_regressor, posun)
+              ext_regressors <- ts(future_values[-(1:posun)], start = c(start[1], (start[2] + 1)), frequency = 12)
+              arima_model <- try(forecast::Arima(ts_real_inf_3, order = c(ar,d,ma), xreg = ext_regressors))
+              
+              
+             
+            } else if(promenna == "posun_vpred") {
+              
+              ext_regressor <- regresor
+              posun <- 1
+              future_values <- opposite_lag(ext_regressor, posun)
+              
               
               # Remove the last row, as it contains NA for future_values
               ext_regressors <- ts(future_values[-length(future_values)], start = start, frequency = 12) #ext_regressors[-nrow(ext_regressors), ]
@@ -306,11 +324,18 @@ for (rocnik in 1:my_matrix_n) {
                 
               } else if (rozeznani_do_tabulky == "delay") {
                 
+                srovnavaci_model <- try(forecast::Arima(ts_real_inf_3, order = c(ar,d,ma)))
+                srovnavaci_vektor <- c(as.character(ar), as.character(d), as.character(ma), srovnavaci_model$aic, srovnavaci_model$aicc, srovnavaci_model$bic)
+                originalni_modely <- rbind(originalni_modely, srovnavaci_vektor)
+          
+                
+              } else if (rozeznani_do_tabulky == "posun_vpred") {
+                
                 srovnavaci_model <- try(forecast::Arima(ts_real_inf_2, order = c(ar,d,ma)))
                 srovnavaci_vektor <- c(as.character(ar), as.character(d), as.character(ma), srovnavaci_model$aic, srovnavaci_model$aicc, srovnavaci_model$bic)
                 originalni_modely <- rbind(originalni_modely, srovnavaci_vektor)
-                # Code to execute if condition 2 is true
-              } 
+                
+              }
               
               
               informace <- c(as.character(colnames(gt_dss)[i]), p_value, moje_aic, moje_aicc, moje_bic, ar, d, ma, rozeznani_do_tabulky, 
@@ -318,7 +343,7 @@ for (rocnik in 1:my_matrix_n) {
               
               ssm <- rbind(ssm, informace)
               
-              rownames(ssm)[nrow(ssm)] <- paste(as.character(end),as.character(i))
+              rownames(ssm)[nrow(ssm)] <- paste(as.character(end[1]),"/",as.character(end[2]),"/",as.character(i))
               
               
               
@@ -390,16 +415,46 @@ tabulka_arima_modelu <- tabulka_arima_modelu[complete.cases(tabulka_arima_modelu
 tabulka_arima_modelu <- tabulka_arima_modelu %>%
   mutate(across(c("AIC", "AICc","BIC", "sAIC", "sAICc","sBIC"), as.numeric))
 
+tabulka_arima_modelu$model <-  tabulka_arima_modelu$AIC + tabulka_arima_modelu$AICc + tabulka_arima_modelu$BIC
+tabulka_arima_modelu$benchmark <- tabulka_arima_modelu$sAIC + tabulka_arima_modelu$sAICc + tabulka_arima_modelu$sBIC
 
-
-tabulka_arima_modelu$vyslednice <- tabulka_arima_modelu$AIC + tabulka_arima_modelu$AICc + tabulka_arima_modelu$BIC - (tabulka_arima_modelu$sAIC + tabulka_arima_modelu$sAICc + tabulka_arima_modelu$sBIC)
+tabulka_arima_modelu$vyslednice <- tabulka_arima_modelu$model - tabulka_arima_modelu$benchmark
 
 View(tabulka_arima_modelu)
 
+tabulka_arima_modelu <- tibble::rownames_to_column(tabulka_arima_modelu, var = "row_names")
+
+tabulka_arima_modelu$row_names <- gsub("X", "", tabulka_arima_modelu$row_names)
+
+# Replace "..." with "/" in the row_names column
+tabulka_arima_modelu$row_names <- gsub("\\.\\.\\.", "/", tabulka_arima_modelu$row_names)
+
+tabulka_arima_modelu$row_names <- gsub("(/[^/]*)/.*", "\\1", tabulka_arima_modelu$row_names)
+
+# Print the updated dataframe
+print(tabulka_arima_modelu)
+
+
+
+min_rows <- tabulka_arima_modelu %>%
+  group_by(row_names) %>%
+  filter(model == min(model) | benchmark == min(benchmark))
+
+# Print the resulting dataframe
+print(min_rows)
 
 
 
 
+
+
+
+
+class(tabulka_arima_modelu$row_names)
+
+x <- c(1:8)
+
+opposite_lag(x, 1)
 
 
 
