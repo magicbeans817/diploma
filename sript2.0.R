@@ -520,243 +520,32 @@ for (i in 1:n_iterations) {
   forecasts[[i]] <- forecast_result
 }
 
+point_estimates <- do.call(c, lapply(forecasts, function(x) x$mean))
 
+# Print the point estimates
+print(point_estimates)
 
+# Create a new time series object with the forecasted values and their respective time indexes
+start_forecast_all <- start_date + c(0, window_size)
+end_forecast_all <- end_date
+ts_forecast <- ts(point_estimates, start = start_forecast_all, end = end_forecast_all, frequency = frequency(ts_real_inf_3))
 
-forecasts[[5]]
-f <- forecasts %>% unlist 
-f <- ts(forecasts, frequency = 12)
-f
-plot(forecasts)
+# Plot the actual and forecasted values together
+ts.plot(ts_real_inf_3, ts_forecast, col = c("black", "red"), lty = c(1, 1), main = "Actual vs. Forecasted Values", xlab = "Time", ylab = "Value")
+legend("topleft", legend = c("Actual", "Forecast"), col = c("black", "red"), lty = c(1, 1), bty = "n")
 
 
+# Extract the actual values for which we have forecasts
+actual_values <- window(ts_real_inf_3, start = start_forecast_all, end = end_forecast_all)
 
+# Calculate quality measures
+mae <- mean(abs(actual_values - point_estimates))
+mse <- mean((actual_values - point_estimates)^2)
+rmse <- sqrt(mse)
 
-
-
-
-
-
-
-
-
-
-forecasts <- list()
-library(forecast)
-
-start_date <- start(ts_real_inf_3)
-end_date <- end(ts_real_inf_3)
-n_iterations <- length(ts_real_inf_3) - window_size - n_ahead + 1
-
-forecasts <- list()
-
-for (i in 1:n_iterations) {
-  start_window <- start_date + (i - 1) * c(0, 1)
-  end_window <- start_window + c(0, window_size - 1)
-  ts_window <- window(ts_real_inf_3, start = start_window, end = end_window)
-  ext_regressors_window <- window(ext_regressors, start = start_window, end = end_window)
-  
-  model <- auto.arima(ts_window, xreg = ext_regressors_window)
-  
-  start_forecast <- end_window + c(0, 1)
-  end_forecast <- start_forecast + c(0, n_ahead - 1)
-  ext_regressors_forecast <- window(ext_regressors, start = start_forecast, end = end_forecast)
-  
-  # Use forecast::forecast instead of the base forecast function
-  forecast_result <- forecast::forecast(model, h = n_ahead, xreg = ext_regressors_forecast)
-  
-  forecasts[[i]] <- forecast_result
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# Loop over the data and perform the rolling and expanding window forecasts
-for (i in 1:expanding_window_size) {
-  
-  print(i)
-  r_m <- try(forecast::Arima(ts_real_inf_3[i:(i + rolling_window_size - 1)], order = c(1,1,2)))#, )#xreg = ext_regressors[i:(i + rolling_window_size - 1)]))
-  
-  if (!inherits(r_m, "try-error")) {
-    # Store the ARIMA model in the list if no error occurred
-  } else {
-    # Print a message and continue to the next iteration if an error occurred
-    cat("Error encountered for ARIMA(", i, ", 0, 0). Skipping this model.\n")
-    
-    rolling_forecasts[(i + rolling_window_size)] <- NA
-    
-    next  # Continue to the next iteration
-  }
-  
-  
-  print(rolling_forecasts[i])
-  
-  r_m_fitted <- r_m$fitted
-  
-  if (i == 1){
-    
-    rolling_forecasts[1:rolling_window_size] <- r_m_fitted[1:rolling_window_size]
-    
-  } 
-  
-  
-  rolling_forecasts[(rolling_window_size + i)] <- forecast(r_m)#, xreg = ext_regressors[i:(i + rolling_window_size)])
-    
-    
-    r_m_fitted[(i + rolling_window_size)]
-  
-}
-
-fc <- 
-print(fc)
-
-
-library(forecast)
-
-# Read in your time series data and external regressor data
-ts_real_inf_3 <- read.csv("time_series_data.csv")
-ext_regressors <- read.csv("google_trends_inflation.csv")
-
-# Combine the data into a single data frame
-data <- data.frame(ts_real_inf_3, ext_regressors)
-
-# Set up the window sizes for the rolling and expanding windows
-rolling_window_size <- 12
-expanding_window_size <- nrow(data) - rolling_window_size
-
-# Set up empty vectors to store the forecasts and actuals
-rolling_forecasts <- numeric()
-rolling_actuals <- numeric()
-expanding_forecasts <- numeric()
-expanding_actuals <- numeric()
-
-# Loop over the data and perform the rolling and expanding window forecasts
-for (i in 1:expanding_window_size) {
-  
-  # Make a rolling forecast for the next period
-  if (i <= rolling_window_size) {
-    next_period <- data[(i + rolling_window_size), ]
-    model <- Arima(data[1:(i + rolling_window_size - 1), "ts_real_inf_3"], 
-                   order = c(1,1,1), 
-                   xreg = data[1:(i + rolling_window_size - 1), "ext_regressors"])
-  } else {
-    next_period <- data[(i + rolling_window_size), ]
-    model <- update(model, 
-                    y = data[(i + rolling_window_size - 1), "ts_real_inf_3"], 
-                    xreg = data[(i + rolling_window_size - 1), "ext_regressors"])
-  }
-  rolling_forecast <- forecast(model, h = 1, xreg = next_period[, "ext_regressors"])
-  rolling_forecasts[i] <- as.numeric(rolling_forecast$mean)
-  rolling_actuals[i] <- next_period[1, "ts_real_inf_3"]
-  
-  # Make an expanding window forecast for the next period
-  if (i <= rolling_window_size) {
-    expanding_data <- data[1:i, ]
-  } else {
-    expanding_data <- data[1:(i + rolling_window_size - 1), ]
-  }
-  expanding_model <- Arima(expanding_data[, "ts_real_inf_3"], 
-                           order = c(1,1,1), 
-                           xreg = expanding_data[, "ext_regressors"])
-  expanding_forecast <- forecast(expanding_model, h = 1, 
-                                 xreg = next_period[, "ext_regressors"])
-  expanding_forecasts[i] <- as.numeric(expanding_forecast$mean)
-  expanding_actuals[i] <- next_period[1, "ts_real_inf_3"]
-  
-  # Update the model with the next data point
-  if (i > rolling_window_size) {
-    model <- update(model, 
-                    y = data[(i + rolling_window_size - 1), "ts_real_inf_3"], 
-                    xreg = data[(i + rolling_window_size - 1), "ext_regressors"])
-  }
-  
-}
-
-# Calculate the rolling and expanding window forecast errors
-rolling_errors <- rolling_actuals - rolling_forecasts
-expanding_errors <- expanding_actuals - expanding_forecasts
-
-# Print the forecast errors
-print(rolling_errors)
-print(expanding_errors)
-
-
-
-
-
-
-
-
-
-
-
-rolling_forecasts
-
-{
-  
-  
-
-  
-  # Update the model with the next data point
-  model <- update(model, y = data[rolling_window_size + i, "ts_real_inf_3"], xreg = data[rolling_window_size + i, "ext_regressors"])
-  
-  # Make a rolling forecast for the next period
-  rolling_forecast <- forecast(model, xreg = data[(i + rolling_window_size + 1), "ext_regressors"])
-  rolling_forecasts[i] <- as.numeric(rolling_forecast$mean)
-  rolling_actuals[i] <- data[(i + rolling_window_size + 1), "ts_data"]
-  
-  # Make an expanding window forecast for the next period
-  expanding_forecast <- forecast(model, xreg = data[(1:i + rolling_window_size), "ext_regressors"])
-  expanding_forecasts[i] <- as.numeric(expanding_forecast$mean[length(expanding_forecast$mean)])
-  expanding_actuals[i] <- data[(i + rolling_window_size + 1), "ts_data"]
-  
-}
-
-# Calculate the rolling and expanding window forecast errors
-rolling_errors <- rolling_actuals - rolling_forecasts
-expanding_errors <- expanding_actuals - expanding_forecasts
-
-# Print the forecast errors
-print(rolling_errors)
-print(expanding_errors)
-
-
-
-
-
-
-
-
+cat("Mean Absolute Error (MAE):", mae, "\n")
+cat("Mean Squared Error (MSE):", mse, "\n")
+cat("Root Mean Squared Error (RMSE):", rmse, "\n")
 
 
 
