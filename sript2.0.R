@@ -14,8 +14,14 @@ library(vars)
 library(tibble)
 
 
+new_data <- 0
 
-rm(list = ls())
+if (new_data == 0){
+  rm(list = ls())
+  new_data <- 0
+}
+
+
 
 DEBUG <- FALSE
 
@@ -97,9 +103,9 @@ colnames(originalni_modely) <- c("dAR","dI","dMA","dAIC","dAICc","dBIC")
 
 
 
-new_data <- 0
 
-if (new_data != 0){
+
+if (new_data == 0){
   for (rocnik in 1:my_matrix_n) {
     
     row_vectors[[rocnik]] <- my_matrix[rocnik, ]
@@ -404,7 +410,17 @@ if (new_data != 0){
   #write.csv(tabulka_arima_modelu, "tabulka_arima_modelu.csv", row.names = FALSE)
   # Loading the dataframe with rownames
   tabulka_arima_modelu <- read.csv("tabulka_arima_modelu.csv", row.names = 1)
+  
+  #write.csv(gt_dss_a, "gt_dss.csv", row.names = TRUE)
+  gt_dss <- read.csv("gt_dss.csv", row.names = 1)
+  
+  ts_real_inf <- ts(data = s_inf_cpm_s, start = c(2004, 1), frequency = 12)
+  ts_real_inf_3 <- ts_real_inf[-1]
+  ts_real_inf_3 <- ts(ts_real_inf_3, start = c(start[1], (start[2] + 1)), frequency = 12)
+  
 }
+
+
 
 
 
@@ -511,6 +527,7 @@ start_date <- start(ts_real_inf_3)
 end_date <- end(ts_real_inf_3)
 n_iterations <- length(ts_real_inf_3) - window_size - n_ahead + 1
 
+
 forecasts_rw <- list()
 
 for (i in 1:n_iterations) {
@@ -531,6 +548,8 @@ for (i in 1:n_iterations) {
   
   forecasts_rw[[i]] <- forecast_result
 }
+
+{
 
 point_estimates_rw <- do.call(c, lapply(forecasts_rw, function(x) x$mean))
 
@@ -559,20 +578,21 @@ cat("Mean Absolute Error (MAE):", mae, "\n")
 cat("Mean Squared Error (MSE):", mse, "\n")
 cat("Root Mean Squared Error (RMSE):", rmse, "\n")
 
+}
 
 
+# Assuming ts_real_inf_3 and ext_regressors are time series objects with the same frequency and date range
 
-start_date <- as.ts(start_date)
-end_date <- as.ts(end_date)
-
+start_date <- start(ts_real_inf_3)
+end_date <- end(ts_real_inf_3)
 n_iterations <- length(ts_real_inf_3) - window_size - n_ahead + 1
 
-forecasts <- list()
+forecasts_ex <- list()
 
 for (i in 1:n_iterations) {
   print(i/n_iterations)
-  start_window <- start_date + (i - 1) * c(0, 1)
-  end_window <- start_window + c(0, window_size - 1)
+  start_window <- start_date
+  end_window <- start_date + c(0, i + window_size - 1)
   ts_window <- window(ts_real_inf_3, start = start_window, end = end_window)
   ext_regressors_window <- window(ext_regressors, start = start_window, end = end_window)
   
@@ -585,9 +605,84 @@ for (i in 1:n_iterations) {
   # Use forecast::forecast instead of the base forecast function
   forecast_result <- forecast::forecast(model, h = n_ahead, xreg = ext_regressors_forecast)
   
-  forecasts[[i]] <- forecast_result
+  forecasts_ex[[i]] <- forecast_result
+  start_date <- start_date + 1
 }
 
+point_estimates_ew <- do.call(c, lapply(forecasts_ex, function(x) x$mean))
+
+print(point_estimates_ew)
+
+forecasts_ex[[5]]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Set the window size and number of periods ahead to forecast
+window_size <- 30
+n_ahead <- 1
+
+# Set the start and end dates for the time series
+start_date <- start(ts_real_inf_3)
+end_date <- end(ts_real_inf_3)
+
+# Set up empty vectors to store the forecasts and actuals
+expanding_forecasts <- numeric()
+expanding_actuals <- numeric()
+
+# Loop over the data and perform the expanding window forecasts
+for (i in  1:length(ts_real_inf_3 - window_size)) {
+  
+  # Set the end date for the current window
+  end_window <- time(ts_real_inf_3)[i + window_size]
+  
+  # Create the training data
+  ts_train <- window(ts_real_inf_3, end = end_window - 1)
+  xreg_train <- window(ext_regressors, end = end_window - 1)
+  
+  # Fit the model using the training data
+  model <- Arima(ts_train, order = c(1,1,1), xreg = xreg_train)
+  
+  # Make a forecast for the next n periods
+  forecast_result <- forecast(model, h = n_ahead, xreg = ext_regressors[i:(i+n_ahead-1),])
+  
+  # Store the forecasted values and actual values for the expanding window
+  expanding_forecasts <- c(expanding_forecasts, as.numeric(forecast_result$mean))
+  expanding_actuals <- c(expanding_actuals, ts_real_inf_3[i:(i+n_ahead-1)])
+  
+}
+
+# Calculate the expanding window forecast errors
+expanding_errors <- expanding_actuals - expanding_forecasts
+
+# Print the forecast errors
+print(expanding_errors)
 
 
 
