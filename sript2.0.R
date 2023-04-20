@@ -584,37 +584,90 @@ cat("Root Mean Squared Error (RMSE):", rmse, "\n")
 # Assuming ts_real_inf_3 and ext_regressors are time series objects with the same frequency and date range
 
 start_date <- start(ts_real_inf_3)
+start_date_offset <- start_date + c(floor((window_size)/12), ((window_size)%%12)+1)
 end_date <- end(ts_real_inf_3)
-n_iterations <- length(ts_real_inf_3) - window_size - n_ahead + 1
+n_iterations <- length(ts_real_inf_3) - window_size - n_ahead
 
 forecasts_ex <- list()
+
+last <- FALSE
 
 for (i in 1:n_iterations) {
   print(i/n_iterations)
   start_window <- start_date
-  end_window <- start_date + c(0, i + window_size - 1)
+  end_date_current <- start_date_offset + c(floor((i)/12), ((i)%%12)+1)
+  end_window <- c(end_date_current[1]+floor(end_date_current[2]/12), (end_date_current[2]%%12)+1)
+  
+  print(c(start_window, end_window))
+  
   ts_window <- window(ts_real_inf_3, start = start_window, end = end_window)
   ext_regressors_window <- window(ext_regressors, start = start_window, end = end_window)
   
-  model <- auto.arima(ts_window, xreg = ext_regressors_window)
+  #model <- auto.arima(ts_window, xreg = ext_regressors_window)
+  model <- try(forecast::Arima(ts_window, order = c(1,1,2), xreg = ext_regressors_window))
   
+  if (inherits(arima_model, "try-error"))  {
+    # Print a message and continue to the next iteration if an error occurred
+    cat("Error encountered for ARIMA(", i) # . Skipping this model.\n")
+    forecasts_ex[[i]] <- 0
+    last <- TRUE
+    next  # Continue to the next iteration
+  }
+  
+  if (last){
+    last <- FALSE
+    
+  }
+
+  
+
   start_forecast <- end_window + c(0, 1)
   end_forecast <- start_forecast + c(0, n_ahead - 1)
   ext_regressors_forecast <- window(ext_regressors, start = start_forecast, end = end_forecast)
   
   # Use forecast::forecast instead of the base forecast function
+  
+  
   forecast_result <- forecast::forecast(model, h = n_ahead, xreg = ext_regressors_forecast)
   
   forecasts_ex[[i]] <- forecast_result
-  start_date <- start_date + 1
 }
 
 point_estimates_ew <- do.call(c, lapply(forecasts_ex, function(x) x$mean))
 
 print(point_estimates_ew)
 
-forecasts_ex[[5]]
 
+{
+  
+  point_estimates_ew <- do.call(c, lapply(forecasts_ex, function(x) x$mean))
+  
+  # Print the point estimates
+  print(point_estimates_ew)
+  
+  # Create a new time series object with the forecasted values and their respective time indexes
+  start_forecast_all <- start_date + c(0, window_size)
+  end_forecast_all <- end_date
+  ts_forecast <- ts(point_estimates_ew, start = start_forecast_all, end = end_forecast_all, frequency = frequency(ts_real_inf_3))
+  
+  # Plot the actual and forecasted values together
+  ts.plot(ts_real_inf_3, ts_forecast, col = c("black", "red"), lty = c(1, 1), main = "Actual vs. Forecasted Values", xlab = "Time", ylab = "Value")
+  legend("topleft", legend = c("Actual", "Forecast"), col = c("black", "red"), lty = c(1, 1), bty = "n")
+  
+  
+  # Extract the actual values for which we have forecasts
+  actual_values <- window(ts_real_inf_3, start = start_forecast_all, end = end_forecast_all)
+  
+  # Calculate quality measures
+  mae <- mean(abs(actual_values - point_estimates_ew))
+  mse <- mean((actual_values - point_estimates_ew)^2)
+  rmse <- sqrt(mse)
+  
+  cat("Mean Absolute Error (MAE):", mae, "\n")
+  cat("Mean Squared Error (MSE):", mse, "\n")
+  cat("Root Mean Squared Error (RMSE):", rmse, "\n")
+  
+}
 
 
 
