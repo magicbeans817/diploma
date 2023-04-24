@@ -501,7 +501,7 @@ arima_model$fitted
 data <- data.frame(ts_real_inf_3, ext_regressors)
 
 # Set up the window sizes for the rolling and expanding windows
-rolling_window_size <- 12
+rolling_window_size <- 70
 expanding_window_size <- nrow(data) - rolling_window_size
 
 # Set up the initial model using the first window of data
@@ -537,18 +537,22 @@ for (i in 1:n_iterations) {
   ts_window <- window(ts_real_inf_3, start = start_window, end = end_window)
   ext_regressors_window <- window(ext_regressors, start = start_window, end = end_window)
   
-  model <- auto.arima(ts_window, xreg = ext_regressors_window)
-  
-  start_forecast <- end_window + c(0, 1)
-  end_forecast <- start_forecast + c(0, n_ahead - 1)
-  ext_regressors_forecast <- window(ext_regressors, start = start_forecast, end = end_forecast)
-  
-  # Use forecast::forecast instead of the base forecast function
-  forecast_result <- forecast::forecast(model, h = n_ahead, xreg = ext_regressors_forecast)
-  
-  forecasts_rw[[i]] <- forecast_result
+  tryCatch({
+    model <- Arima(ts_window, order = c(1, 1, 2), xreg = ext_regressors_window)
+    
+    start_forecast <- end_window + c(0, 1)
+    end_forecast <- start_forecast + c(0, n_ahead - 1)
+    ext_regressors_forecast <- window(ext_regressors, start = start_forecast, end = end_forecast)
+    
+    forecast_result <- forecast::forecast(model, h = n_ahead, xreg = ext_regressors_forecast)
+    
+    forecasts_rw[[i]] <- forecast_result
+  }, error = function(e) {
+    cat("Error at iteration", i, ":", e$message, "\n")
+  })
 }
 
+# bodiky
 {
 
 point_estimates_rw <- do.call(c, lapply(forecasts_rw, function(x) x$mean))
@@ -556,8 +560,10 @@ point_estimates_rw <- do.call(c, lapply(forecasts_rw, function(x) x$mean))
 # Print the point estimates
 print(point_estimates_rw)
 
+
 # Create a new time series object with the forecasted values and their respective time indexes
-start_forecast_all <- start_date + c(0, window_size)
+prec <- c(window_size )
+start_forecast_all <- start_date + c(0 , window_size)
 end_forecast_all <- end_date
 ts_forecast <- ts(point_estimates_rw, start = start_forecast_all, end = end_forecast_all, frequency = frequency(ts_real_inf_3))
 
@@ -579,6 +585,76 @@ cat("Mean Squared Error (MSE):", mse, "\n")
 cat("Root Mean Squared Error (RMSE):", rmse, "\n")
 
 }
+
+
+
+# Expanding window forecast
+n <- length(ts_real_inf_3)
+start_forecast <- 70
+forecasts <- ts(numeric(n - start_forecast + 1), start = start(ts_real_inf_3)[1] + (start_forecast - 1) / frequency(ts_real_inf_3), frequency = frequency(ts_real_inf_3))
+
+for (t in start_forecast:n) {
+  # Fit the ARIMA model with the external regressor on the expanding window
+  model <- Arima(ts_real_inf_3[1:(t - 1)], order = c(1, 1, 2), xreg = ext_regressors[1:(t - 1)])
+  
+  # One-step ahead forecast
+  forecast <- predict(model, n.ahead = 1, newxreg = ext_regressors[t])
+  
+  # Save the forecast
+  forecasts[t - start_forecast + 1] <- forecast$pred
+}
+
+# bodiky
+{
+# Print the forecasts
+print(forecasts)
+
+lines(forecasts, col = "blue")
+
+
+# Calculate the errors
+errors <- forecasts - ts_real_inf_3[start_forecast:n]
+
+# Calculate MAE
+mae <- mean(abs(errors))
+
+# Calculate MSE
+mse <- mean(errors^2)
+
+# Calculate RMSE
+rmse <- sqrt(mse)
+
+# Print the results
+cat("Mean Absolute Error (MAE):", mae, "\n")
+cat("Mean Squared Error (MSE):", mse, "\n")
+cat("Root Mean Squared Error (RMSE):", rmse, "\n")
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # Assuming ts_real_inf_3 and ext_regressors are time series objects with the same frequency and date range
