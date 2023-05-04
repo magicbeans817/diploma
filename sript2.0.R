@@ -84,7 +84,7 @@ debug_print(start)
 
 
 
-jmena_sloupecku <- c("promenna", "p-value", "AIC","AICc","BIC", "AR", "I", "MA", "lag", "sAIC", "sAICc","sBIC")
+jmena_sloupecku <- c("promenna", "p-value", "AIC","AICc","BIC", "AR", "I", "MA", "coef","lag", "sAIC", "sAICc","sBIC")
 pocet_sloupecku <- length(jmena_sloupecku)
 
 
@@ -211,7 +211,7 @@ if (new_data == 0){
     # Srovnani s arimou bez external regresoru
     
     arima_model <- forecast::Arima(ts_real_inf, order = c(ar,d,ma))
-    ssm <- matrix(c("originalni model", NA, arima_model$aic, arima_model$aicc, arima_model$bic, ar, d, ma, "lag", "Vojta", "je", "debil"), nrow = 1, ncol = length(jmena_sloupecku))
+    ssm <- matrix(c("originalni model", NA, arima_model$aic, arima_model$aicc, arima_model$bic, ar, d, ma, 0, "lag", "Vojta", "je", "debil"), nrow = 1, ncol = length(jmena_sloupecku))
     colnames(ssm) <- jmena_sloupecku
     
     pocet_ss <- 0
@@ -354,7 +354,7 @@ if (new_data == 0){
                 }
                 
                 
-                informace <- c(as.character(colnames(gt_dss)[i]), p_value, moje_aic, moje_aicc, moje_bic, ar, d, ma, rozeznani_do_tabulky, 
+                informace <- c(as.character(colnames(gt_dss)[i]), p_value, moje_aic, moje_aicc, moje_bic, ar, d, ma, co,rozeznani_do_tabulky, 
                                srovnavaci_model$aic, srovnavaci_model$aicc, srovnavaci_model$bic)
                 
                 ssm <- rbind(ssm, informace)
@@ -549,13 +549,17 @@ for (i in 1:n_iterations) {
     forecasts_rw[[i]] <- forecast_result
   }, error = function(e) {
     cat("Error at iteration", i, ":", e$message, "\n")
+    forecasts_rw[[i]] <- "TVOJE"
   })
 }
+
+
+point_estimates_rw <- do.call(c, lapply(forecasts_rw, function(x) x$mean))
 
 # bodiky
 {
 
-point_estimates_rw <- do.call(c, lapply(forecasts_rw, function(x) x$mean))
+
 
 # Print the point estimates
 print(point_estimates_rw)
@@ -585,6 +589,97 @@ cat("Mean Squared Error (MSE):", mse, "\n")
 cat("Root Mean Squared Error (RMSE):", rmse, "\n")
 
 }
+
+uga <-  c("ext", "rw", mae, mse, rmse)
+
+tabulka_nej_model <- matrix(uga, nrow = 1, ncol = length(uga))
+
+
+
+start_date <- start(ts_real_inf_3)
+end_date <- end(ts_real_inf_3)
+n_iterations <- length(ts_real_inf_3) - window_size - n_ahead + 1
+
+
+forecasts_rw_bez <- list()
+
+for (i in 1:n_iterations) {
+  print(i/n_iterations)
+  start_window <- start_date + (i - 1) * c(0, 1)
+  end_window <- start_window + c(0, window_size - 1)
+  ts_window <- window(ts_real_inf_3, start = start_window, end = end_window)
+  ext_regressors_window <- window(ext_regressors, start = start_window, end = end_window)
+  
+  tryCatch({
+    model <- Arima(ts_window, order = c(1, 1, 2))
+    
+    start_forecast <- end_window + c(0, 1)
+    end_forecast <- start_forecast + c(0, n_ahead - 1)
+    ext_regressors_forecast <- window(ext_regressors, start = start_forecast, end = end_forecast)
+    
+    forecast_result <- forecast::forecast(model, h = n_ahead, xreg = ext_regressors_forecast)
+    
+    forecasts_rw_bez[[i]] <- forecast_result
+  }, error = function(e) {
+    cat("Error at iteration", i, ":", e$message, "\n")
+    forecasts_rw_bez[[i]] <- "TVOJE"
+  })
+}
+
+
+point_estimates_rw_bez <- do.call(c, lapply(forecasts_rw_bez, function(x) x$mean))
+
+# bodiky
+{
+  
+  
+  
+  # Print the point estimates
+  print(point_estimates_rw_bez)
+  
+  
+  # Create a new time series object with the forecasted values and their respective time indexes
+  prec <- c(window_size )
+  start_forecast_all <- start_date + c(0 , window_size)
+  end_forecast_all <- end_date
+  ts_forecast <- ts(point_estimates_rw_bez, start = start_forecast_all, end = end_forecast_all, frequency = frequency(ts_real_inf_3))
+  
+  # Plot the actual and forecasted values together
+  ts.plot(ts_real_inf_3, ts_forecast, col = c("black", "red"), lty = c(1, 1), main = "Actual vs. Forecasted Values", xlab = "Time", ylab = "Value")
+  legend("topleft", legend = c("Actual", "Forecast"), col = c("black", "red"), lty = c(1, 1), bty = "n")
+  
+  
+  # Extract the actual values for which we have forecasts
+  actual_values <- window(ts_real_inf_3, start = start_forecast_all, end = end_forecast_all)
+  
+  # Calculate quality measures
+  mae <- mean(abs(actual_values - point_estimates_rw_bez))
+  mse <- mean((actual_values - point_estimates_rw_bez)^2)
+  rmse <- sqrt(mse)
+  
+  cat("Mean Absolute Error (MAE):", mae, "\n")
+  cat("Mean Squared Error (MSE):", mse, "\n")
+  cat("Root Mean Squared Error (RMSE):", rmse, "\n")
+  
+}
+
+
+tabulka_nej_model <- rbind(tabulka_nej_model, c("bez", "rw", mae, mse, rmse))
+
+
+
+
+
+
+
+
+#srovnani
+
+
+
+
+
+
 
 
 
@@ -634,12 +729,56 @@ cat("Root Mean Squared Error (RMSE):", rmse, "\n")
 
 
 
+tabulka_nej_model <- rbind(tabulka_nej_model, c("ext", "ew", mae, mse, rmse))
 
 
 
 
+for (t in start_forecast:n) {
+  # Fit the ARIMA model with the external regressor on the expanding window
+  model <- Arima(ts_real_inf_3[1:(t - 1)], order = c(1, 1, 2))
+  
+  # One-step ahead forecast
+  forecast <- predict(model, n.ahead = 1)
+  
+  # Save the forecast
+  forecasts[t - start_forecast + 1] <- forecast$pred
+}
+
+# bodiky
+{
+  # Print the forecasts
+  print(forecasts)
+  
+  lines(forecasts, col = "blue")
+  
+  
+  # Calculate the errors
+  errors <- forecasts - ts_real_inf_3[start_forecast:n]
+  
+  # Calculate MAE
+  mae <- mean(abs(errors))
+  
+  # Calculate MSE
+  mse <- mean(errors^2)
+  
+  # Calculate RMSE
+  rmse <- sqrt(mse)
+  
+  # Print the results
+  cat("Mean Absolute Error (MAE):", mae, "\n")
+  cat("Mean Squared Error (MSE):", mse, "\n")
+  cat("Root Mean Squared Error (RMSE):", rmse, "\n")
+  
+  
+}
+#################################################### Rolling and expanding window forecasts bez regresoru
 
 
+tabulka_nej_model <- rbind(tabulka_nej_model, c("bez", "ew", mae, mse, rmse))
+
+
+#sejvuju env
 
 
 
