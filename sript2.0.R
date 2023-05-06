@@ -12,7 +12,7 @@ library(stats)
 library(crayon)
 library(vars)
 library(tibble)
-
+library(xtable)
 
 new_data <- 0
 
@@ -182,6 +182,13 @@ if (new_data == 0){
     
     pca <- prcomp(gt_dss, scale. = TRUE)
     
+    print(pca)
+    
+    if (rocnik == 2){
+      
+      pca_2022 <- pca
+      
+    }
     # Print PCA results (eigenvalues, eigenvectors, and standard deviations)
     debug_print(pca)
     
@@ -779,6 +786,208 @@ tabulka_nej_model <- rbind(tabulka_nej_model, c("bez", "ew", mae, mse, rmse))
 
 
 #sejvuju env
+
+View(tabulka_arima_modelu)
+View(gt_dss)
+View(min_rows)
+
+
+tabulka_arima_modelu %>% group_by(row_names) %>% count(promenna)
+
+
+View(print(tabulka_arima_modelu %>% group_by(promenna) %>%filter(row_names == "2022/2")))
+
+print(pca_2022)
+
+pc_1 <- pca_2022[[2]]
+
+pc_1 <- pc_1[,"PC1"]
+
+pc_1 <- as.data.frame(pc_1 %>% round(2))
+
+pc_1
+
+print(xtable(pc_1, caption = "Degree of correlation between First principal component and other search queries",
+             digits = 2, type = "latex"), file = "tabulka_pc1.tex")
+
+
+
+pc_1_modely <- tabulka_arima_modelu %>% filter(promenna == "PC1")
+
+sorted_df <- pc_1_modely[order(pc_1_modely$model), ]
+
+pc_1_modely <- sorted_df[1:3,]
+
+pc_1_modely_rounded <- data.frame(sapply(pc_1_modely, function(x) {
+  if (is.numeric(x)) {
+    return(round(x, 4))
+  } else {
+    return(x)
+  }
+}))
+
+pc_1_modely
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+5 <8
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
