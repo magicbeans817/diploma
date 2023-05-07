@@ -13,6 +13,9 @@ library(crayon)
 library(vars)
 library(tibble)
 library(xtable)
+library(ggplot2)
+library(tidyr)
+library(tidyverse)
 
 new_data <- 0
 
@@ -377,6 +380,8 @@ if (new_data == 0){
                 # Generate the fitted values
                 fitted_values <- arima_model$fitted
                 
+                
+                if (DEBUG == TRUE) {
                 if (rozeznani_do_tabulky == "regresor"){
                   barvicka <- "blue"
                 } else {
@@ -399,7 +404,7 @@ if (new_data == 0){
                        lty = c(1, 1),
                        col = c("black", barvicka))
                 
-                
+                }
               } else {
                 debug_print(colnames(gt_dss)[i])
               }
@@ -418,7 +423,7 @@ if (new_data == 0){
   # Loading the dataframe with rownames
   tabulka_arima_modelu <- read.csv("tabulka_arima_modelu.csv", row.names = 1)
   
-  #write.csv(gt_dss_a, "gt_dss.csv", row.names = TRUE)
+  write.csv(gt_dss_a, "gt_dss.csv", row.names = TRUE)
   gt_dss <- read.csv("gt_dss.csv", row.names = 1)
   
   ts_real_inf <- ts(data = s_inf_cpm_s, start = c(2004, 1), frequency = 12)
@@ -507,8 +512,19 @@ arima_model$fitted
 # Combine the data into a single data frame
 data <- data.frame(ts_real_inf_3, ext_regressors)
 
+uga <-  c("iterace", "ext", "rw", "mae", "mse", "rmse")
+
+tabulka_nej_model <- matrix( nrow = 1, ncol = length(uga))
+colnames(tabulka_nej_model) <- as.character(uga)
+
+
+# sejvni env - bubu verze
+#######################################################################################################################################################
+for (bubu in 72:200) {
+  print(bubu)
+
 # Set up the window sizes for the rolling and expanding windows
-rolling_window_size <- 70
+rolling_window_size <- bubu
 expanding_window_size <- nrow(data) - rolling_window_size
 
 # Set up the initial model using the first window of data
@@ -538,7 +554,7 @@ n_iterations <- length(ts_real_inf_3) - window_size - n_ahead + 1
 forecasts_rw <- list()
 
 for (i in 1:n_iterations) {
-  print(i/n_iterations)
+  debug_print(i/n_iterations)
   start_window <- start_date + (i - 1) * c(0, 1)
   end_window <- start_window + c(0, window_size - 1)
   ts_window <- window(ts_real_inf_3, start = start_window, end = end_window)
@@ -569,7 +585,7 @@ point_estimates_rw <- do.call(c, lapply(forecasts_rw, function(x) x$mean))
 
 
 # Print the point estimates
-print(point_estimates_rw)
+debug_print(point_estimates_rw)
 
 
 # Create a new time series object with the forecasted values and their respective time indexes
@@ -579,8 +595,8 @@ end_forecast_all <- end_date
 ts_forecast <- ts(point_estimates_rw, start = start_forecast_all, end = end_forecast_all, frequency = frequency(ts_real_inf_3))
 
 # Plot the actual and forecasted values together
-ts.plot(ts_real_inf_3, ts_forecast, col = c("black", "red"), lty = c(1, 1), main = "Actual vs. Forecasted Values", xlab = "Time", ylab = "Value")
-legend("topleft", legend = c("Actual", "Forecast"), col = c("black", "red"), lty = c(1, 1), bty = "n")
+#ts.plot(ts_real_inf_3, ts_forecast, col = c("black", "red"), lty = c(1, 1), main = "Actual vs. Forecasted Values", xlab = "Time", ylab = "Value")
+#legend("topleft", legend = c("Actual", "Forecast"), col = c("black", "red"), lty = c(1, 1), bty = "n")
 
 
 # Extract the actual values for which we have forecasts
@@ -597,11 +613,8 @@ cat("Root Mean Squared Error (RMSE):", rmse, "\n")
 
 }
 
-uga <-  c("ext", "rw", mae, mse, rmse)
 
-tabulka_nej_model <- matrix(uga, nrow = 1, ncol = length(uga))
-
-
+tabulka_nej_model <- rbind(tabulka_nej_model, c(bubu,"ext", "rw", mae, mse, rmse))
 
 start_date <- start(ts_real_inf_3)
 end_date <- end(ts_real_inf_3)
@@ -611,7 +624,7 @@ n_iterations <- length(ts_real_inf_3) - window_size - n_ahead + 1
 forecasts_rw_bez <- list()
 
 for (i in 1:n_iterations) {
-  print(i/n_iterations)
+  debug_print(i/n_iterations)
   start_window <- start_date + (i - 1) * c(0, 1)
   end_window <- start_window + c(0, window_size - 1)
   ts_window <- window(ts_real_inf_3, start = start_window, end = end_window)
@@ -642,7 +655,7 @@ point_estimates_rw_bez <- do.call(c, lapply(forecasts_rw_bez, function(x) x$mean
   
   
   # Print the point estimates
-  print(point_estimates_rw_bez)
+  debug_print(point_estimates_rw_bez)
   
   
   # Create a new time series object with the forecasted values and their respective time indexes
@@ -652,8 +665,8 @@ point_estimates_rw_bez <- do.call(c, lapply(forecasts_rw_bez, function(x) x$mean
   ts_forecast <- ts(point_estimates_rw_bez, start = start_forecast_all, end = end_forecast_all, frequency = frequency(ts_real_inf_3))
   
   # Plot the actual and forecasted values together
-  ts.plot(ts_real_inf_3, ts_forecast, col = c("black", "red"), lty = c(1, 1), main = "Actual vs. Forecasted Values", xlab = "Time", ylab = "Value")
-  legend("topleft", legend = c("Actual", "Forecast"), col = c("black", "red"), lty = c(1, 1), bty = "n")
+  #ts.plot(ts_real_inf_3, ts_forecast, col = c("black", "red"), lty = c(1, 1), main = "Actual vs. Forecasted Values", xlab = "Time", ylab = "Value")
+  #legend("topleft", legend = c("Actual", "Forecast"), col = c("black", "red"), lty = c(1, 1), bty = "n")
   
   
   # Extract the actual values for which we have forecasts
@@ -670,29 +683,12 @@ point_estimates_rw_bez <- do.call(c, lapply(forecasts_rw_bez, function(x) x$mean
   
 }
 
-
-tabulka_nej_model <- rbind(tabulka_nej_model, c("bez", "rw", mae, mse, rmse))
-
-
-
-
-
-
-
-
-#srovnani
-
-
-
-
-
-
-
+tabulka_nej_model <- rbind(tabulka_nej_model, c(bubu,"bez", "rw", mae, mse, rmse))
 
 
 # Expanding window forecast
 n <- length(ts_real_inf_3)
-start_forecast <- 70
+start_forecast <- rolling_window_size
 forecasts <- ts(numeric(n - start_forecast + 1), start = start(ts_real_inf_3)[1] + (start_forecast - 1) / frequency(ts_real_inf_3), frequency = frequency(ts_real_inf_3))
 
 for (t in start_forecast:n) {
@@ -709,7 +705,7 @@ for (t in start_forecast:n) {
 # bodiky
 {
 # Print the forecasts
-print(forecasts)
+debug_print(forecasts)
 
 lines(forecasts, col = "blue")
 
@@ -736,7 +732,7 @@ cat("Root Mean Squared Error (RMSE):", rmse, "\n")
 
 
 
-tabulka_nej_model <- rbind(tabulka_nej_model, c("ext", "ew", mae, mse, rmse))
+tabulka_nej_model <- rbind(tabulka_nej_model, c(bubu,"ext", "ew", mae, mse, rmse))
 
 
 
@@ -755,7 +751,7 @@ for (t in start_forecast:n) {
 # bodiky
 {
   # Print the forecasts
-  print(forecasts)
+  debug_print(forecasts)
   
   lines(forecasts, col = "blue")
   
@@ -782,10 +778,94 @@ for (t in start_forecast:n) {
 #################################################### Rolling and expanding window forecasts bez regresoru
 
 
-tabulka_nej_model <- rbind(tabulka_nej_model, c("bez", "ew", mae, mse, rmse))
+tabulka_nej_model <- rbind(tabulka_nej_model, c(bubu, "bez", "ew", mae, mse, rmse))
 
 
+
+}
 #sejvuju env
+tabulka_nej_model <- as.data.frame(tabulka_nej_model)
+tabulka_nej_model <- tabulka_nej_model[-1,]
+
+colnames(tabulka_nej_model) <- as.character(uga)
+tabulka_nej_model
+
+tabulka_nej_model$iterace <- as.numeric(tabulka_nej_model$iterace)
+tabulka_nej_model$mae <- as.numeric(tabulka_nej_model$mae)
+tabulka_nej_model$mse <- as.numeric(tabulka_nej_model$mse)
+tabulka_nej_model$rmse <- as.numeric(tabulka_nej_model$rmse)
+
+
+meritka <- c("mae","mse", "rmse")
+par(mfrow = c(2, 2))
+for (model in unique(tabulka_nej_model$ext)) {
+  for (predpoved in unique(tabulka_nej_model$rw)) {
+
+      data_graf <- tabulka_nej_model %>% filter(ext == model)
+      data_graf <- data_graf %>% filter(rw == predpoved)
+
+      
+      if (model == "ext") {
+        nazev_grafu_ext <- "External regressor"
+      } else {
+        nazev_grafu_ext <- "Benchmark model"
+      }
+      
+      if (predpoved == "rw") {
+        nazev_grafu_rw <- "Rolling window forecast"
+      } else {
+        nazev_grafu_rw <- "Expanding window forecast"
+      }
+      
+      
+      matplot(data_graf$iterace, data_graf[, meritka], type = "l", ylim = c(0.3,0.9), 
+              xlab = "(Starting) Window length", ylab = "Value", main = c(paste(nazev_grafu_rw, " - ", nazev_grafu_ext)))
+      
+
+      legend("topleft", legend = colnames(data_graf[, meritka]), col = 1:3, lty = 1, cex = 0.8)
+  }
+}
+
+
+
+line_types <- c(1, 1, 1, 2, 2, 2)
+colores <- c("#3399FF", "#33CC66", "#FF0000", "#4DA6FF", "#66CC99", "#FF6666")#3399FF #33CC66
+par(mfrow = c(1, 2))
+for (predpoved in unique(tabulka_nej_model$rw)) {
+  
+  if (predpoved == "rw") {
+    nazev_grafu_rw <- "Rolling window forecast"
+  } else {
+    nazev_grafu_rw <- "Expanding window forecast"
+  }
+  
+  
+  data_graf <- tabulka_nej_model %>% filter(rw == predpoved)
+  jmena_sloupcu <- colnames(data_graf)
+  
+  data_graf <- cbind(data_graf %>% filter(ext == "ext"), data_graf %>% filter(ext == "bez"))
+  colnames(data_graf)[7:12] <- c("v1", "v2","v3", "b_mae", "b_mse", "b_rmse")
+  
+  meritka <- c("mae","mse", "rmse", "b_mae", "b_mse", "b_rmse")
+  
+  if(predpoved == "rw"){
+    osa_x <- "Window length"
+  } else {
+    osa_x <- "Starting window length"
+  }
+  
+  matplot(data_graf$iterace, data_graf[, meritka], type = "l", lty = line_types, ylim = c(0.3,0.9), 
+          xlab = osa_x, ylab = "Value", col = colores, main = nazev_grafu_rw)
+  
+  # Add a legend
+  legend("topleft", legend = colnames(data_graf[, meritka]), col = colores, lty = line_types, cex = 1)
+}
+
+
+
+
+
+
 
 View(tabulka_arima_modelu)
 View(gt_dss)
@@ -818,6 +898,55 @@ sorted_df <- pc_1_modely[order(pc_1_modely$model), ]
 
 pc_1_modely <- sorted_df[1:3,]
 
+pc_1_modely$coef <- as.numeric(pc_1_modely$coef)
+
+pc_1_modely_rounded <- data.frame(sapply(pc_1_modely, function(x) {
+  if (is.numeric(x)) {
+    return(round(x, 4))
+  } else {
+    return(x)
+  }
+}))
+
+pc_1_modely
+
+print(xtable(pc_1_modely, caption = "Modely",
+             digits = 2, type = "latex"), file = "tabulka_pc1_modely.tex")
+
+
+
+
+
+
+
+pc_1_modely <- tabulka_arima_modelu %>% filter(promenna == "cena.nafty")
+
+sorted_df <- pc_1_modely[order(pc_1_modely$benchmark), ]
+
+pc_1_modely <- sorted_df[1:3,]
+
+pc_1_modely$coef <- as.numeric(pc_1_modely$coef)
+
+pc_1_modely_rounded <- data.frame(sapply(pc_1_modely, function(x) {
+  if (is.numeric(x)) {
+    return(round(x, 4))
+  } else {
+    return(x)
+  }
+}))
+
+pc_1_modely
+
+
+
+pc_1_modely <- tabulka_arima_modelu %>% filter(row_names == "2022/2") %>% filter(promenna == "cena.nemovitosti")
+
+sorted_df <- pc_1_modely[order(pc_1_modely$benchmark), ]
+
+pc_1_modely <- sorted_df[1:3,]
+
+pc_1_modely$coef <- as.numeric(pc_1_modely$coef)
+
 pc_1_modely_rounded <- data.frame(sapply(pc_1_modely, function(x) {
   if (is.numeric(x)) {
     return(round(x, 4))
@@ -832,18 +961,65 @@ pc_1_modely
 
 
 
+pc_1_modely <- tabulka_arima_modelu %>% filter(row_names == "2022/2") %>% filter(promenna == "cena.ropy")
+
+sorted_df <- pc_1_modely[order(pc_1_modely$benchmark), ]
+
+pc_1_modely <- sorted_df[1:3,]
+
+pc_1_modely$coef <- as.numeric(pc_1_modely$coef)
+
+pc_1_modely_rounded <- data.frame(sapply(pc_1_modely, function(x) {
+  if (is.numeric(x)) {
+    return(round(x, 4))
+  } else {
+    return(x)
+  }
+}))
+
+pc_1_modely
 
 
 
 
 
+pc_1_modely <- tabulka_arima_modelu %>% filter(row_names == "2022/2") %>% filter(promenna == "inflace")
+
+sorted_df <- pc_1_modely[order(pc_1_modely$benchmark), ]
+
+pc_1_modely <- sorted_df[1:3,]
+
+pc_1_modely$coef <- as.numeric(pc_1_modely$coef)
+
+pc_1_modely_rounded <- data.frame(sapply(pc_1_modely, function(x) {
+  if (is.numeric(x)) {
+    return(round(x, 4))
+  } else {
+    return(x)
+  }
+}))
+
+pc_1_modely
 
 
 
+pc_1_modely <- tabulka_arima_modelu %>% filter(row_names == "2023/2") %>% filter(promenna == "inflace")
 
+sorted_df <- pc_1_modely[order(pc_1_modely$benchmark), ]
 
+pc_1_modely <- sorted_df[1:3,]
 
+pc_1_modely$coef <- as.numeric(pc_1_modely$coef)
 
+pc_1_modely_rounded <- data.frame(sapply(pc_1_modely, function(x) {
+  if (is.numeric(x)) {
+    return(round(x, 4))
+  } else {
+    return(x)
+  }
+}))
+
+pc_1_modely
 
 
 
