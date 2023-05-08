@@ -785,6 +785,11 @@ tabulka_nej_model <- rbind(tabulka_nej_model, c(bubu, "bez", "ew", mae, mse, rms
 }
 #sejvuju env
 tabulka_nej_model <- as.data.frame(tabulka_nej_model)
+tabulka_nej_model_z <- tabulka_nej_model
+#tabulka_nej_model <- tabulka_nej_model_z
+
+
+
 tabulka_nej_model <- tabulka_nej_model[-1,]
 
 colnames(tabulka_nej_model) <- as.character(uga)
@@ -794,6 +799,9 @@ tabulka_nej_model$iterace <- as.numeric(tabulka_nej_model$iterace)
 tabulka_nej_model$mae <- as.numeric(tabulka_nej_model$mae)
 tabulka_nej_model$mse <- as.numeric(tabulka_nej_model$mse)
 tabulka_nej_model$rmse <- as.numeric(tabulka_nej_model$rmse)
+
+
+tabulka_nej_model
 
 
 meritka <- c("mae","mse", "rmse")
@@ -839,10 +847,10 @@ for (predpoved in unique(tabulka_nej_model$rw)) {
     nazev_grafu_rw <- "Expanding window forecast"
   }
   
-  
+  print(predpoved)
   data_graf <- tabulka_nej_model %>% filter(rw == predpoved)
   jmena_sloupcu <- colnames(data_graf)
-  
+  print(predpoved)
   data_graf <- cbind(data_graf %>% filter(ext == "ext"), data_graf %>% filter(ext == "bez"))
   colnames(data_graf)[7:12] <- c("v1", "v2","v3", "b_mae", "b_mse", "b_rmse")
   
@@ -858,10 +866,64 @@ for (predpoved in unique(tabulka_nej_model$rw)) {
           xlab = osa_x, ylab = "Value", col = colores, main = nazev_grafu_rw)
   
   # Add a legend
-  legend("topleft", legend = colnames(data_graf[, meritka]), col = colores, lty = line_types, cex = 1)
+  legend("topright", legend = colnames(data_graf[, meritka]), col = colores, lty = line_types, cex = 1)
 }
 
 
+
+
+# testy
+
+
+for (predpoved in unique(tabulka_nej_model$rw)) {
+  
+  if (predpoved == "rw") {
+    nazev_grafu_rw <- "Rolling window forecast"
+  } else {
+    nazev_grafu_rw <- "Expanding window forecast"
+  }
+  
+
+  data_graf <- tabulka_nej_model %>% filter(rw == predpoved)
+  jmena_sloupcu <- colnames(data_graf)
+
+  data_graf <- cbind(data_graf %>% filter(ext == "ext"), data_graf %>% filter(ext == "bez"))
+  testy <- data_graf[,c(4,5,6,10,11,12)]
+  
+  print(predpoved)
+  
+  print("parove modely")
+  
+  alternativa <- c("less")
+  
+  t_mae <- t.test(testy$mae ,testy$mae.1 , alternative = alternativa, paired = TRUE)
+  print(t_mae)
+  
+  t_mse <- t.test(testy$mse ,testy$mse.1 , alternative = alternativa, paired = TRUE)
+  print(t_mse)
+  
+  t_rmse <- t.test(testy$rmse ,testy$rmse.1 , alternative = alternativa, paired = TRUE)
+  print(t_rmse)
+  
+  
+  print("NEparove modely")
+  t_mae <- t.test(testy$mae ,testy$mae.1 , alternative = alternativa)
+  print(t_mae)
+  
+  t_mse <- t.test(testy$mse ,testy$mse.1 , alternative = alternativa)
+  print(t_mse)
+  
+  t_rmse <- t.test(testy$rmse ,testy$rmse.1 , alternative = alternativa)
+  print(t_rmse)
+}
+
+
+
+
+
+tabulka_nej_model_testy <- cbind(tabulka_nej_model %>% filter(rw == "rw"),tabulka_nej_model %>% filter(rw == "ew"))
+tabulka_nej_model_testy <- tabulka_nej_model_testy[, c(4,5,6,10,11,12)]
+t.test(tabulka_nej_model_testy$mae ,tabulka_nej_model_testy$mae.1 , alternative = alternativa)
 
 
 
