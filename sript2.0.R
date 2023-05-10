@@ -558,7 +558,7 @@ for (i in 1:n_iterations) {
   start_window <- start_date + (i - 1) * c(0, 1)
   end_window <- start_window + c(0, window_size - 1)
   ts_window <- window(ts_real_inf_3, start = start_window, end = end_window)
-  ext_regressors_window <- window(ext_regressors, start = start_window, end = end_window)
+  ext_regressors_window <- window(ext_regressors, start = start_window, end = end_window)http://127.0.0.1:13577/graphics/plot_zoom_png?width=2560&height=1377
   
   tryCatch({
     model <- Arima(ts_window, order = c(1, 1, 2), xreg = ext_regressors_window)
@@ -854,7 +854,7 @@ for (predpoved in unique(tabulka_nej_model$rw)) {
   data_graf <- cbind(data_graf %>% filter(ext == "ext"), data_graf %>% filter(ext == "bez"))
   colnames(data_graf)[7:12] <- c("v1", "v2","v3", "b_mae", "b_mse", "b_rmse")
   
-  meritka <- c("mae","mse", "rmse", "b_mae", "b_mse", "b_rmse")
+  meritka <- c("iterace","mae","mse", "rmse", "b_mae", "b_mse", "b_rmse")
   
   if(predpoved == "rw"){
     osa_x <- "Window length"
@@ -888,9 +888,25 @@ for (predpoved in unique(tabulka_nej_model$rw)) {
   jmena_sloupcu <- colnames(data_graf)
 
   data_graf <- cbind(data_graf %>% filter(ext == "ext"), data_graf %>% filter(ext == "bez"))
-  testy <- data_graf[,c(4,5,6,10,11,12)]
+  testy <- data_graf[,c(1,4,5,6,10,11,12)]
+  
+  soucet_m <- testy$mae + testy$mse + testy$rmse
+  
+  soucet_b <- testy$mae.1 + testy$mse.1 + testy$rmse.1
+  
+  my_vector <- soucet_m
+  
+  smallest_values <- sort(my_vector)[1:3]
+  
+  # Get the indices of the smallest values
+  indices <- which(my_vector %in% smallest_values)
   
   print(predpoved)
+  print("3 nejlepsi settingy okna")
+  print(testy[indices,"iterace"])
+
+  print("jak casto nizsi?")
+  print(sum(soucet_m < soucet_b))
   
   print("parove modely")
   
