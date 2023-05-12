@@ -558,7 +558,7 @@ for (i in 1:n_iterations) {
   start_window <- start_date + (i - 1) * c(0, 1)
   end_window <- start_window + c(0, window_size - 1)
   ts_window <- window(ts_real_inf_3, start = start_window, end = end_window)
-  ext_regressors_window <- window(ext_regressors, start = start_window, end = end_window)http://127.0.0.1:13577/graphics/plot_zoom_png?width=2560&height=1377
+  ext_regressors_window <- window(ext_regressors, start = start_window, end = end_window)
   
   tryCatch({
     model <- Arima(ts_window, order = c(1, 1, 2), xreg = ext_regressors_window)
