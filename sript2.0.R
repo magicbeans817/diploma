@@ -838,7 +838,7 @@ for (model in unique(tabulka_nej_model$ext)) {
 
 line_types <- c(1, 1, 1, 2, 2, 2)
 colores <- c("#3399FF", "#33CC66", "#FF0000", "#4DA6FF", "#66CC99", "#FF6666")#3399FF #33CC66
-par(mfrow = c(1, 2))
+par(mfrow = c(1, 1))
 for (predpoved in unique(tabulka_nej_model$rw)) {
   
   if (predpoved == "rw") {
@@ -847,14 +847,17 @@ for (predpoved in unique(tabulka_nej_model$rw)) {
     nazev_grafu_rw <- "Expanding window forecast"
   }
   
-  print(predpoved)
+  
   data_graf <- tabulka_nej_model %>% filter(rw == predpoved)
   jmena_sloupcu <- colnames(data_graf)
   print(predpoved)
   data_graf <- cbind(data_graf %>% filter(ext == "ext"), data_graf %>% filter(ext == "bez"))
-  colnames(data_graf)[7:12] <- c("v1", "v2","v3", "b_mae", "b_mse", "b_rmse")
   
-  meritka <- c("iterace","mae","mse", "rmse", "b_mae", "b_mse", "b_rmse")
+  print(data_graf)
+  colnames(data_graf)[7:12] <- c("v1", "v2","v3", "mae - benchmark", "mse - benchmark", "rmse - benchmark")
+  
+  
+  meritka <- c("mae","mse", "rmse", "mae - benchmark", "mse - benchmark", "rmse - benchmark")
   
   if(predpoved == "rw"){
     osa_x <- "Window length"
@@ -866,7 +869,7 @@ for (predpoved in unique(tabulka_nej_model$rw)) {
           xlab = osa_x, ylab = "Value", col = colores, main = nazev_grafu_rw)
   
   # Add a legend
-  legend("topright", legend = colnames(data_graf[, meritka]), col = colores, lty = line_types, cex = 1)
+  legend("top", legend = colnames(data_graf[, meritka]), col = colores, lty = line_types, cex = 1)
 }
 
 
@@ -988,6 +991,7 @@ pc_1_modely_rounded <- data.frame(sapply(pc_1_modely, function(x) {
 
 pc_1_modely
 
+pc_1_modely <- pc_1_modely[,c(7,8,9,10,3,11,4,5,6,12,13,14)]
 print(xtable(pc_1_modely, caption = "Modely",
              digits = 2, type = "latex"), file = "tabulka_pc1_modely.tex")
 
