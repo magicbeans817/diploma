@@ -945,7 +945,8 @@ tabulka_nej_model_testy <- tabulka_nej_model_testy[, c(4,5,6,10,11,12)]
 t.test(tabulka_nej_model_testy$mae ,tabulka_nej_model_testy$mae.1 , alternative = alternativa)
 
 
-
+print(xtable(min_rows, caption = "Best models",
+             digits = 2, type = "latex"), file = "min_rows.tex")
 
 
 View(tabulka_arima_modelu)
