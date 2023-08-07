@@ -944,7 +944,8 @@ tabulka_nej_model_testy <- cbind(tabulka_nej_model %>% filter(rw == "rw"),tabulk
 tabulka_nej_model_testy <- tabulka_nej_model_testy[, c(4,5,6,10,11,12)]
 t.test(tabulka_nej_model_testy$mae ,tabulka_nej_model_testy$mae.1 , alternative = alternativa)
 
-
+#tisknuti tabulek do texu
+{
 print(xtable(min_rows, caption = "Best models",
              digits = 2, type = "latex"), file = "min_rows.tex")
 
@@ -1108,6 +1109,36 @@ pc_1_modely
 
 5 <8
 
+}
+
+
+
+
+######################################################################################################
+# VAR model
+
+
+for (i in 1:ncol(gt_dss)) {
+  debug_print(i)
+  b <- colnames(gt_dss)[i]
+  print(b)
+  
+  var_regresor <- ts(gt_dss[,i], start = start, frequency = 12)
+  var_regresor <- window(var_regresor, start = start, end = end, frequency = 12)
+  for (j in 1:2) {
+    data_matrix <- cbind(ts_real_inf, var_regresor)
+    complete_matrix <- data_matrix[complete.cases(data_matrix), ]
+    if(nrow(data_matrix) != nrow(complete_matrix)){
+      print("Tohle bude problemek")
+    }
+    colnames(complete_matrix)[2] <- b
+    var_model <- vars::VAR(complete_matrix, p = j, type = "const")
+    summary(var_model) %>% print
+  }
+}
+
+
+summary(var_model)
 
 
 
@@ -1115,16 +1146,101 @@ pc_1_modely
 
 
 
+library(forecast)
+library(vars)
+library(lmtest)  # Load the lmtest package for coeftest
 
+# Assuming ts_real_inf and ext_regressors are time series objects with the same frequency and date range
 
+start_date <- start(ts_real_inf)
+end_date <- end(ts_real_inf)
+n_iterations <- length(ts_real_inf) - window_size - n_ahead + 1
+max_lag <- 12  # Set the maximum lag order for model selection
 
+pocet_parametru <- 5
+# Create an empty matrix to store the parameters of the best model for each column in gt_dss
+parameter_matrix <- matrix(NA, ncol(gt_dss), pocet_parametru)  # 5 columns for Variable, AIC, AICc, BIC, and lag_order
+# Create an empty list to store parameters of every model for each column in gt_dss
+all_var_models <- matrix(c("originalni model", "AIC", "AICc", "BIC", "Lags"), nrow = 1, ncol = pocet_parametru)
 
+# Column names of gt_dss
+gt_dss_names <- colnames(gt_dss)
 
+for (i in 1:ncol(gt_dss)) {
+  debug_print(i)
+  b <- colnames(gt_dss)[i]
+  print(b)
+  
+  var_regressor <- ts(gt_dss[, i], start = start, frequency = 12)
+  var_regressor <- window(var_regressor, start = start, end = end, frequency = 12)
+  
+  selected_lag <- NULL
+  
+  for (j in 1:max_lag) {
+    data_matrix <- cbind(ts_real_inf, var_regressor)
+    complete_matrix <- data_matrix[complete.cases(data_matrix), ]
+    if (nrow(data_matrix) != nrow(complete_matrix)) {
+      print("Tohle bude problemek")
+    }
+    colnames(complete_matrix)[2] <- b
+    
+    # Fit the VAR model with the current lag order
+    var_model <- VAR(complete_matrix, p = j, type = "both")
+    
+    # Get the AIC value for the current model
+    aic_value <- AIC(var_model)
+    
+    # Get the number of parameters (k) and observations (n)
+    k <- length(coef(var_model))
+    n <- nrow(complete_matrix)
+    
+    # Calculate AICc and BIC
+    aicc_value <- aic_value + (2 * k * (k + 1)) / (n - k - 1)
+    bic_value <- aic_value + k * log(n)
+    
+    vektorek <- c(gt_dss_names[i], aic_value, aicc_value, bic_value, j)
+    all_var_models <- rbind(all_var_models, vektorek)
+    
+    # If this is the first iteration or the current AICc value is smaller than the previous one,
+    # update the selected lag order and model
+    if (is.null(selected_lag) || aicc_value < selected_lag$aicc) {
+      selected_lag <- list(aic = aic_value, aicc = aicc_value, bic = bic_value, lag_order = j, model = var_model)
+    }
+  }
+  
+  # Save the parameters of the best model to the parameter matrix
+  parameter_matrix[i, 1] <- gt_dss_names[i]
+  parameter_matrix[i, 2] <- selected_lag$aic
+  parameter_matrix[i, 3] <- selected_lag$aicc
+  parameter_matrix[i, 4] <- selected_lag$bic
+  parameter_matrix[i, 5] <- selected_lag$lag_order
+  
+  
+  # Get the best fitted VAR model based on AICc
+  best_var_model <- selected_lag$model
+  
+  # Print the summary of the best fitted model
+  cat("Selected Lag Order:", selected_lag$lag_order, "\n")
+  cat("AIC:", selected_lag$aic, "\n")
+  cat("AICc:", selected_lag$aicc, "\n")
+  cat("BIC:", selected_lag$bic, "\n")
+  cat("Best Model Summary:\n")
+  summary(best_var_model) %>% print
+  
+  # Get p-values for each variable in the selected model
+  p_values <- coeftest(best_var_model)
+  
+  # Print the p-values
+  cat("P-Values:\n")
+  print(p_values)
+  
+  # Add the forecast result to a list or data frame for further analysis or visualization
+  # (not included in the code snippet)
+}
 
-
-
-
-
+all_var_models %>% dim
+rownames(all_var_models) <- c(1:nrow(all_var_models))
+all_var_models
 
 
 
@@ -1498,27 +1614,7 @@ merged_data %>% dim()
 
 
 
-######################################################################################################
-# VAR model
 
-
-for (i in 1:ncol(gt_dss)) {
-  debug_print(i)
-  b <- colnames(gt_dss)[i]
-  debug_print(b)
-  
-  var_regresor <- ts(gt_dss[,i], start = start, frequency = 12)
-  var_regresor <- window(var_regresor, start = start, end = end, frequency = 12)
-  for (j in 1:1) {
-    data_matrix <- cbind(ts_real_inf, var_regresor)
-    complete_matrix <- data_matrix[complete.cases(data_matrix), ]
-    var_model <- vars::VAR(complete_matrix, p = j, type = "const")
-    summary(var_model) %>% print
-  }
-}
-
-
-summary(var_model)
 
 
 
