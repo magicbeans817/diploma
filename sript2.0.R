@@ -76,6 +76,11 @@ gt <- read.csv("search_trends.csv", row.names = 1)
 gt %>% head
 gt%>% dim
 
+
+gt_up <- read.csv("search_trends_up.csv", row.names = 1)
+gt <- cbind(gt, gt_up[,14:ncol(gt_up)])
+
+
 rownm <- as.Date(rownames(gt), format = "%Y-%d-%m")
 rownm <- format(rownm, "%Y-%m-%d")
 start <- rownames(gt)[1]
@@ -128,11 +133,11 @@ if (new_data == 0){
       deseasonalized <- stl_model$time.series[, "remainder"]
       return(deseasonalized)
     }))
-    
+    print("printim rownm")
+    print(rownm)
     # Print the deseasonalized data
     row.names(gt_deseasonalized) <- rownm
     debug_print(gt_deseasonalized)
-    
     for (i in 1:ncol(gt_deseasonalized)) {
       plot(gt_deseasonalized[,i], ylab = colnames(gt_deseasonalized)[i])
       tseries::adf.test(gt_deseasonalized[,i])
