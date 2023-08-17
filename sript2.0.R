@@ -75,7 +75,7 @@ plot(inf_cpm)
 gt <- read.csv("search_trends.csv", row.names = 1)
 gt %>% head
 gt%>% dim
-gt <- gt[ , !(names(gt) %in% c("cena.benzinu", "cena.nemovitosti", "cena.bydleni", "nakup.zlata"))]
+gt <- gt[ , !(names(gt) %in% c("cena.bydleni", "nakup.zlata"))]
 
 
 gt_up <- read.csv("search_trends_up.csv", row.names = 1)
