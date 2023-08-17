@@ -110,7 +110,11 @@ row_vectors <- vector("list", length = my_matrix_n)
 originalni_modely <- matrix(c(1:6), nrow = 1)
 colnames(originalni_modely) <- c("dAR","dI","dMA","dAIC","dAICc","dBIC") 
 
-
+testy <- data.frame(time_interval = character(),
+                    column_name = character(),
+                    adf_p_value = numeric(),
+                    ljung_box_p_value = numeric(),
+                    stringsAsFactors = FALSE)
 
 
 
@@ -183,7 +187,20 @@ if (new_data == 0){
       }
     }
     
-    
+    for (i in 1:ncol(gt_dss)) {
+      
+      # ADF Test
+      adf_test <- adf.test(gt_dss[,i])
+      
+      # Ljung-Box Test
+      lb_test <- Box.test(gt_dss[,i], lag = 10, type = "Ljung-Box")
+      
+      # Append results to testy dataframe
+      testy <- rbind(testy, data.frame(time_interval = rocnik,
+                                       column_name = as.character(colnames(gt_dss)[i]), 
+                                       adf_p_value = adf_test$p.value, 
+                                       ljung_box_p_value = lb_test$p.value))
+    }
     ######################################################################################################
     # PCA
     
@@ -435,6 +452,7 @@ if (new_data == 0){
   ts_real_inf_3 <- ts(ts_real_inf_3, start = c(start[1], (start[2] + 1)), frequency = 12)
   
 }
+
 
 
 
