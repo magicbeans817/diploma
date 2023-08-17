@@ -193,7 +193,7 @@ if (new_data == 0){
       adf_test <- adf.test(gt_dss[,i])
       
       # Ljung-Box Test
-      lb_test <- Box.test(gt_dss[,i], lag = 10, type = "Ljung-Box")
+      lb_test <- Box.test(gt_dss[,i], lag = 12, type = "Ljung-Box")
       
       # Append results to testy dataframe
       testy <- rbind(testy, data.frame(time_interval = rocnik,
