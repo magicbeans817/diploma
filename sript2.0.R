@@ -75,6 +75,7 @@ plot(inf_cpm)
 gt <- read.csv("search_trends.csv", row.names = 1)
 gt %>% head
 gt%>% dim
+gt <- gt[ , !(names(gt) %in% c("cena.benzinu", "cena.nemovitosti", "cena.bydleni", "nakup.zlata"))]
 
 
 gt_up <- read.csv("search_trends_up.csv", row.names = 1)
@@ -133,8 +134,6 @@ if (new_data == 0){
       deseasonalized <- stl_model$time.series[, "remainder"]
       return(deseasonalized)
     }))
-    print("printim rownm")
-    print(rownm)
     # Print the deseasonalized data
     row.names(gt_deseasonalized) <- rownm
     debug_print(gt_deseasonalized)
