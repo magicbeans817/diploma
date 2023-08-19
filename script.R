@@ -270,10 +270,46 @@ legend("topleft", legend = c("Actual", "Forecast"), lty = c(1,1), col = c("blue"
 
 
 
+# Installing and loading the necessary package
+install.packages("lmtest")
+library(lmtest)
+
+# Sample data (replace this with your time series data)
+set.seed(123)
+n <- 100
+x <- rnorm(n)
+y <- rnorm(n)
+
+# Performing the Granger Causality test
+result <- grangertest(y ~ x, order = 5, data = data.frame(y, x))
+
+result
+result$`Pr(>F)`
+# Printing the p-value
+print(paste("P-value for Granger Causality test:", result$p.value))
 
 
 
 
+# If you haven't installed microbenchmark yet:
+install.packages("microbenchmark")
+
+library(microbenchmark)
+
+# Sample dataframe
+set.seed(123)
+df <- data.frame(a = sample(c(1:5, NA), 1000, replace = TRUE), 
+                 b = sample(c(1:5, NA), 1000, replace = TRUE),
+                 c = sample(c(1:5, NA), 1000, replace = TRUE))
+
+# Benchmarking
+results <- microbenchmark(
+  na.omit_method = na.omit(df),
+  complete.cases_method = df[complete.cases(df), ],
+  times = 100
+)
+
+print(results)
 
 
 
