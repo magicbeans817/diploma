@@ -116,7 +116,10 @@ testy <- data.frame(time_interval = character(),
                     ljung_box_p_value = numeric(),
                     stringsAsFactors = FALSE)
 
-
+granger <- data.frame(time_interval = character(),
+                      column_name = character(), 
+                      n_lags = numeric(), 
+                      granger_p_value = numeric())
 
 if (new_data == 0){
   for (rocnik in 1:my_matrix_n) {
@@ -174,18 +177,11 @@ if (new_data == 0){
     
     
     ######################################################################################################
-    # Subsetting, Granger, adjustment of GT
+    # Subsetting, tests and adjustment of GT
     
     s_inf_cpm_s <- window(ts_deseasonalized, frequency = 12, start = c(rok, mesic), end = end)
     
-    for (i in 1:ncol(gt_dss)) {
-      x <- ts(gt_dss[, i], start = start, frequency = 12)
-      for (j in 1:3) {
-        y<- lmtest::grangertest(s_inf_cpm_s, x, order = j)
-        debug_print(y)
-        debug_print(colnames(gt_dss)[i])
-      }
-    }
+ 
     
     for (i in 1:ncol(gt_dss)) {
       
@@ -226,6 +222,28 @@ if (new_data == 0){
     
     gt_dss <- cbind(gt_dss, pca$x[,c(1:index)])
     
+    
+    # granger
+    
+    for (i in 1:ncol(gt_dss)) {
+      x <- ts(gt_dss[, i], start = start, frequency = 12)
+      for (j in 1:12) {
+
+        
+        y <- lmtest::grangertest(s_inf_cpm_s, x, order = j)
+        debug_print(y)
+        debug_print(colnames(gt_dss)[i])
+
+        
+
+        granger <- rbind(granger, data.frame(time_interval = rocnik,
+                                             column_name = as.character(colnames(gt_dss)[i]), 
+                                             n_lags = j, 
+                                             granger_p_value = y$`Pr(>F)`))
+
+      }
+    }
+
     
     ######################################################################################################
     # Arima
@@ -454,7 +472,9 @@ if (new_data == 0){
 }
 
 
-
+granger <- na.omit(granger)
+granger_sub <- granger %>% filter(granger_p_value < 0.05)
+granger_sub %>% count(column_name)
 
 
 
