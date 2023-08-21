@@ -88,12 +88,13 @@ start <- rownames(gt)[1]
 rok   <- as.numeric(substr(start, 1, 4))
 mesic <- as.numeric(substr(start, 6, 7))
 start <- c(rok, mesic)
-debug_print(start)
 
 
 
 
-jmena_sloupecku <- c("promenna", "p-value", "AIC","AICc","BIC", "AR", "I", "MA", "coef","lag", "sAIC", "sAICc","sBIC")
+
+jmena_sloupecku <- c("promenna", "p-value", "AIC","AICc","BIC", "AR", "I", "MA", "coef","lag", "sAIC", "sAICc","sBIC", 
+                     "mae", "mse", "rmse", "b_mae", "b_mse", "b_rmse")
 pocet_sloupecku <- length(jmena_sloupecku)
 
 
@@ -101,7 +102,7 @@ pocet_sloupecku <- length(jmena_sloupecku)
 tabulka_arima_modelu <- data.frame(matrix(ncol = pocet_sloupecku, nrow = 0))
 colnames(tabulka_arima_modelu) <- jmena_sloupecku
 
-my_matrix <- matrix(c(2019, 2, 2022, 2, 2023, 2), nrow = 3, ncol = 2, byrow = TRUE)
+my_matrix <- matrix(c(2020, 2, 2022, 2, 2023, 2), nrow = 3, ncol = 2, byrow = TRUE)
 my_matrix_n <- nrow(my_matrix)
 
 # Create an empty list to store the row vectors
@@ -121,6 +122,9 @@ granger <- data.frame(time_interval = character(),
                       n_lags = numeric(), 
                       granger_p_value = numeric())
 
+
+bum <- 0
+
 if (new_data == 0){
   for (rocnik in 1:my_matrix_n) {
     
@@ -132,8 +136,18 @@ if (new_data == 0){
     #end   <- c(2022, 2)
     
     
+    if(rocnik == 1){
+      gt_f <- gt[1:(nrow(gt)-36),]
+    }else if(rocnik == 2){
+      gt_f <- gt[1:(nrow(gt)-12),]
+    }else if(rocnik == 3){
+      gt_f <- gt
+    }
+    
+    debug_print("tvoje mama")
+    
     # Convert all columns to numeric
-    gt_numeric <- data.frame(lapply(gt, as.numeric))
+    gt_numeric <- data.frame(lapply(gt_f, as.numeric))
     
     # Remove seasonality from the data
     gt_deseasonalized <- data.frame(lapply(gt_numeric, function(x) {
@@ -141,8 +155,24 @@ if (new_data == 0){
       deseasonalized <- stl_model$time.series[, "remainder"]
       return(deseasonalized)
     }))
+    
+    debug_print("moje mama")
+    
     # Print the deseasonalized data
-    row.names(gt_deseasonalized) <- rownm
+    
+    debug_print("markova mama")
+    
+    
+    
+    if(rocnik == 1){
+      row.names(gt_deseasonalized) <- rownm[1:(length(rownm)-36)]
+    }else if(rocnik == 2){
+      row.names(gt_deseasonalized) <- rownm[1:(length(rownm)-12)]
+    }else if(rocnik == 3){
+      row.names(gt_deseasonalized) <- rownm
+    }
+    
+    
     debug_print(gt_deseasonalized)
     for (i in 1:ncol(gt_deseasonalized)) {
       plot(gt_deseasonalized[,i], ylab = colnames(gt_deseasonalized)[i])
@@ -260,7 +290,8 @@ if (new_data == 0){
     # Srovnani s arimou bez external regresoru
     
     arima_model <- forecast::Arima(ts_real_inf, order = c(ar,d,ma))
-    ssm <- matrix(c("originalni model", NA, arima_model$aic, arima_model$aicc, arima_model$bic, ar, d, ma, 0, "lag", "Vojta", "je", "debil"), nrow = 1, ncol = length(jmena_sloupecku))
+    ssm <- matrix(c("originalni model", NA, arima_model$aic, arima_model$aicc, arima_model$bic, ar, d, ma, 0, "lag", "Vojta", "je", "debil",
+                    "mae", "mse", "rmse", "b_mae", "b_mse", "b_rmse"), nrow = 1, ncol = length(jmena_sloupecku))
     colnames(ssm) <- jmena_sloupecku
     
     pocet_ss <- 0
@@ -284,15 +315,17 @@ if (new_data == 0){
     
     
     ######################################################################################################
-    for (ar in 1:3) {
+    for (i in 1:ncol(gt_dss)) {
+      print(colnames(gt_dss)[i])
       for (d in 0:1) {
         for (ma in 1:3) {
-          for (i in 1:ncol(gt_dss)) {
+          for (ar in 1:3) {
+          
             
             debug_print(i)
             
             regresor <- ts(data = gt_dss[,i], start = c(2004, 1), end = end, frequency = 12)
-            regresor <- regresor / mean(regresor) * mean(ts_real_inf)
+            #regresor <- regresor / mean(regresor) * mean(ts_real_inf)
             #print(regresor)
             
             for (promenna in c("regresor","delay", "posun_vpred")) {
@@ -307,28 +340,50 @@ if (new_data == 0){
               } else if(promenna == "delay"){
                 
                 ext_regressor <- regresor
+                if(bum == 1){
                 #future_values <- opposite_lag(ext_regressor, 1)
                 posun <- 1
                 future_values <- stats::lag(ext_regressor, posun)
                 ext_regressors <- ts(future_values[-(1:posun)], start = c(start[1], (start[2])), frequency = 12)
                 #ext_regressors <- ts(regresor, start = c(start[1], (start[2]+1)))
                 arima_model <- try(forecast::Arima(ts_real_inf_3, order = c(ar,d,ma), xreg = ext_regressors))
+                } else {
+                  ext_regressor <- as.vector(ext_regressor)
+                  ext_regressor <- lag(ext_regressor, 1)
+                  ext_regressor <- ts(ext_regressor, start = c(start[1], (start[2])), frequency = 12)
+                  
+
+                  arima_model <- try(forecast::Arima(ts_real_inf, order = c(ar,d,ma), xreg = ext_regressor))
+                }
+                
+                
+                
                 #print(ext_regressors)
                 #print(ts_real_inf_3)
                 #print("Konec")
                 
               } else if(promenna == "posun_vpred") {
                 
-                
                 ext_regressor <- regresor
-                posun <- 1
-                future_values <- opposite_lag(ext_regressor, posun)
+                if(bum == 1){
+                  ext_regressor <- regresor
+                  posun <- 1
+                  future_values <- opposite_lag(ext_regressor, posun)
+                  
+                  
+                  # Remove the last row, as it contains NA for future_values
+                  ext_regressors <- ts(future_values[-length(future_values)], start = start, frequency = 12) #ext_regressors[-nrow(ext_regressors), ]
+                  
+                  arima_model <- try(forecast::Arima(ts_real_inf_2, order = c(ar,d,ma), xreg = ext_regressors))
+                } else {
+                  ts_real_inf_4 <- ts_real_inf
+                  ext_regressor <- opposite_lag(ext_regressor, 1)
+                  ext_regressor <- ts(ext_regressor, start = c(start[1], (start[2])), frequency = 12)
+                  
+                  arima_model <- try(forecast::Arima(ts_real_inf_4, order = c(ar,d,ma), xreg = ext_regressor))
+                }
                 
-                
-                # Remove the last row, as it contains NA for future_values
-                ext_regressors <- ts(future_values[-length(future_values)], start = start, frequency = 12) #ext_regressors[-nrow(ext_regressors), ]
-                
-                arima_model <- try(forecast::Arima(ts_real_inf_2, order = c(ar,d,ma), xreg = ext_regressors))
+
               }
               
               
@@ -345,7 +400,7 @@ if (new_data == 0){
                 # Store the ARIMA model in the list if no error occurred
               } else {
                 # Print a message and continue to the next iteration if an error occurred
-                cat("Error encountered for ARIMA(", i) # . Skipping this model.\n")
+                cat("Error encountered for ARIMA(", colnames(gt_dss)[i]) # . Skipping this model.\n")
                 next  # Continue to the next iteration
               }
               
@@ -381,6 +436,31 @@ if (new_data == 0){
                 moje_bic <- round(arima_model$bic, digits = cifry)
                 
                 
+                # mae, mse, rmse
+                
+                fitted_values <- fitted(arima_model)
+                
+                if(promenna == "posun_vpred"){
+                  
+                  residuals <- ts_real_inf_4 - fitted_values
+                  
+                } else {
+                  
+                  residuals <- ts_real_inf - fitted_values
+                  
+                }
+                
+                # Mean Absolute Error (MAE)
+                mae <- mean(abs(residuals))
+                
+                # Mean Squared Error (MSE)
+                mse <- mean(residuals^2)
+                
+                # Root Mean Squared Error (RMSE)
+                rmse <- sqrt(mse)
+                
+                
+                
                 if (rozeznani_do_tabulky == "regresor") {
                   
                   srovnavaci_model <- try(forecast::Arima(ts_real_inf, order = c(ar,d,ma)))
@@ -389,22 +469,51 @@ if (new_data == 0){
                   
                 } else if (rozeznani_do_tabulky == "delay") {
                   
-                  srovnavaci_model <- try(forecast::Arima(ts_real_inf_3, order = c(ar,d,ma)))
+                  srovnavaci_model <- try(forecast::Arima(ts_real_inf, order = c(ar,d,ma)))
                   srovnavaci_vektor <- c(as.character(ar), as.character(d), as.character(ma), srovnavaci_model$aic, srovnavaci_model$aicc, srovnavaci_model$bic)
                   originalni_modely <- rbind(originalni_modely, srovnavaci_vektor)
                   
                   
                 } else if (rozeznani_do_tabulky == "posun_vpred") {
                   
-                  srovnavaci_model <- try(forecast::Arima(ts_real_inf_2, order = c(ar,d,ma)))
+                  srovnavaci_model <- try(forecast::Arima(ts_real_inf_4, order = c(ar,d,ma)))
                   srovnavaci_vektor <- c(as.character(ar), as.character(d), as.character(ma), srovnavaci_model$aic, srovnavaci_model$aicc, srovnavaci_model$bic)
                   originalni_modely <- rbind(originalni_modely, srovnavaci_vektor)
                   
                 }
                 
                 
+                # benchmark mae, mse, rmse
+                
+                fitted_values <- fitted(srovnavaci_model)
+                
+                if(promenna == "posun_vpred"){
+                  
+                  residuals <- ts_real_inf_4 - fitted_values
+                  
+                } else {
+                  
+                  residuals <- ts_real_inf - fitted_values
+                  
+                }
+                
+                # Mean Absolute Error (MAE)
+                b_mae <- mean(abs(residuals))
+                
+                # Mean Squared Error (MSE)
+                b_mse <- mean(residuals^2)
+                
+                # Root Mean Squared Error (RMSE)
+                b_rmse <- sqrt(b_mse)
+                
+                
+                
+                
+          
+                
+                
                 informace <- c(as.character(colnames(gt_dss)[i]), p_value, moje_aic, moje_aicc, moje_bic, ar, d, ma, co,rozeznani_do_tabulky, 
-                               srovnavaci_model$aic, srovnavaci_model$aicc, srovnavaci_model$bic)
+                               srovnavaci_model$aic, srovnavaci_model$aicc, srovnavaci_model$bic, mae, mse, rmse, b_mae, b_mse, b_rmse)
                 
                 ssm <- rbind(ssm, informace)
                 
@@ -505,8 +614,12 @@ tabulka_arima_modelu <- tabulka_arima_modelu %>%
 
 tabulka_arima_modelu$model <-  tabulka_arima_modelu$AIC + tabulka_arima_modelu$AICc + tabulka_arima_modelu$BIC
 tabulka_arima_modelu$benchmark <- tabulka_arima_modelu$sAIC + tabulka_arima_modelu$sAICc + tabulka_arima_modelu$sBIC
-
 tabulka_arima_modelu$vyslednice <- tabulka_arima_modelu$model - tabulka_arima_modelu$benchmark
+
+tabulka_arima_modelu$model_bez_bic <-  tabulka_arima_modelu$AIC + tabulka_arima_modelu$AICc
+tabulka_arima_modelu$benchmark_bez_bic <- tabulka_arima_modelu$sAIC + tabulka_arima_modelu$sAICc
+tabulka_arima_modelu$vyslednice_bez_bic <- tabulka_arima_modelu$model_bez_bic - tabulka_arima_modelu$benchmark_bez_bic
+
 
 #View(tabulka_arima_modelu)
 
@@ -530,6 +643,32 @@ min_rows <- tabulka_arima_modelu %>%
 
 # Print the resulting dataframe
 print(min_rows)
+
+min_rows_bez_bic <- tabulka_arima_modelu %>%
+  group_by(row_names) %>%
+  filter(model_bez_bic == min(model_bez_bic) | benchmark_bez_bic == min(benchmark_bez_bic))
+
+# Print the resulting dataframe
+print(min_rows_bez_bic)
+
+
+
+min_rows_delay <- tabulka_arima_modelu %>% filter(lag == "delay")
+min_rows_delay
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ######################################################################################################
