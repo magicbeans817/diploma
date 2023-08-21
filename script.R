@@ -194,6 +194,73 @@ lines(gt_inf_s, col = "blue")
 
 
 
+# Simulate example time series
+set.seed(123)
+y <- rnorm(100)
+x <- rnorm(100)
+
+# Create lagged version of x
+lagged_x <- lag(x, 1)
+
+y <- y[-1]
+lagged_x <- lagged_x[-length(lagged_x)]
+
+
+try(forecast::Arima(y, order = c(1,1,1), xreg = x))
+
+
+
+x %>% length
+y %>% length
+
+
+
+
+
+
+library(forecast)
+
+# Sample time series
+set.seed(123)
+y <- ts(rnorm(100))
+
+# Fit the ARIMA model
+fit <- auto.arima(y)
+fitted_values <- fitted(fit)
+residuals <- y - fitted_values
+# Mean Absolute Error (MAE)
+mae <- mean(abs(residuals))
+
+# Mean Squared Error (MSE)
+mse <- mean(residuals^2)
+
+# Root Mean Squared Error (RMSE)
+rmse <- sqrt(mse)
+
+cat("MAE:", mae, "\n")
+cat("MSE:", mse, "\n")
+cat("RMSE:", rmse, "\n")
+
+
+fit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
