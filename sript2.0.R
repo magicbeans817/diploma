@@ -354,7 +354,6 @@ if (new_data == 0){
                   
 
                   arima_model <- try(forecast::Arima(ts_real_inf, order = c(ar,d,ma), xreg = ext_regressor))
-                  print(arima_model)
                 }
                 
                 
@@ -441,6 +440,11 @@ if (new_data == 0){
                 # mae, mse, rmse
                 
                 fitted_values <- fitted(arima_model)
+                if(sum(is.na(fitted_values)) > 0){
+                  print(sum(is.na(fitted_values))/length(fitted_values))
+                  cat("Och muj boze")
+                }
+                
                 
                 if(promenna == "posun_vpred"){
                   
@@ -451,6 +455,8 @@ if (new_data == 0){
                   residuals <- ts_real_inf - fitted_values
                   
                 }
+                
+                residuals <- na.omit(residuals)
                 
                 # Mean Absolute Error (MAE)
                 mae <- mean(abs(residuals))
@@ -509,13 +515,10 @@ if (new_data == 0){
                 b_rmse <- sqrt(b_mse)
                 
                 
-                
-                
-          
-                
-                
                 informace <- c(as.character(colnames(gt_dss)[i]), p_value, moje_aic, moje_aicc, moje_bic, ar, d, ma, co,rozeznani_do_tabulky, 
                                srovnavaci_model$aic, srovnavaci_model$aicc, srovnavaci_model$bic, mae, mse, rmse, b_mae, b_mse, b_rmse)
+                
+                print(informace)
                 
                 ssm <- rbind(ssm, informace)
                 
@@ -563,8 +566,8 @@ if (new_data == 0){
         }
       }
     }
-    debug_print(paste("Pocet statisticky signifikantnich promennych je", pocet_ss))
-    debug_print(ssm)
+    print(paste("Pocet statisticky signifikantnich promennych je", pocet_ss))
+    print(ssm)
     tabulka_arima_modelu <- rbind(tabulka_arima_modelu, ssm)
   }
   
