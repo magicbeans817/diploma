@@ -143,6 +143,21 @@ plot(inf_classic_sd)
 tseries::adf.test(inf_classic_sd_s)
 
 
+# Installing and loading the necessary package
+install.packages("lmtest")
+library(lmtest)
+
+# Sample data (replace this with your time series data)
+set.seed(123)
+n <- 100
+x <- rnorm(n)
+y <- rnorm(n)
+
+# Performing the Granger Causality test
+result <- lmtest::grangertest(y ~ x, order = 1, data = data.frame(y, x))
+
+# Printing the p-value
+print(paste("P-value for Granger Causality test:", result$p.value))
 
 
 
