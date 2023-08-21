@@ -24,7 +24,7 @@ if (new_data == 0){
   new_data <- 0
 }
 
-
+posun <- 1
 
 DEBUG <- FALSE
 
@@ -325,7 +325,7 @@ if (new_data == 0){
             debug_print(i)
             
             regresor <- ts(data = gt_dss[,i], start = c(2004, 1), end = end, frequency = 12)
-            #regresor <- regresor / mean(regresor) * mean(ts_real_inf)
+            regresor <- regresor / regresor[1] * ts_real_inf[1]
             #print(regresor)
             
             for (promenna in c("regresor","delay", "posun_vpred")) {
@@ -349,11 +349,12 @@ if (new_data == 0){
                 arima_model <- try(forecast::Arima(ts_real_inf_3, order = c(ar,d,ma), xreg = ext_regressors))
                 } else {
                   ext_regressor <- as.vector(ext_regressor)
-                  ext_regressor <- lag(ext_regressor, 1)
+                  ext_regressor <- lag(ext_regressor, posun)
                   ext_regressor <- ts(ext_regressor, start = c(start[1], (start[2])), frequency = 12)
                   
 
                   arima_model <- try(forecast::Arima(ts_real_inf, order = c(ar,d,ma), xreg = ext_regressor))
+                  print(arima_model)
                 }
                 
                 
@@ -375,9 +376,10 @@ if (new_data == 0){
                   ext_regressors <- ts(future_values[-length(future_values)], start = start, frequency = 12) #ext_regressors[-nrow(ext_regressors), ]
                   
                   arima_model <- try(forecast::Arima(ts_real_inf_2, order = c(ar,d,ma), xreg = ext_regressors))
+                  
                 } else {
                   ts_real_inf_4 <- ts_real_inf
-                  ext_regressor <- opposite_lag(ext_regressor, 1)
+                  ext_regressor <- opposite_lag(ext_regressor, posun)
                   ext_regressor <- ts(ext_regressor, start = c(start[1], (start[2])), frequency = 12)
                   
                   arima_model <- try(forecast::Arima(ts_real_inf_4, order = c(ar,d,ma), xreg = ext_regressor))
