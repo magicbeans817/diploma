@@ -518,7 +518,6 @@ if (new_data == 0){
                 informace <- c(as.character(colnames(gt_dss)[i]), p_value, moje_aic, moje_aicc, moje_bic, ar, d, ma, co,rozeznani_do_tabulky, 
                                srovnavaci_model$aic, srovnavaci_model$aicc, srovnavaci_model$bic, mae, mse, rmse, b_mae, b_mse, b_rmse)
                 
-                print(informace)
                 
                 ssm <- rbind(ssm, informace)
                 
