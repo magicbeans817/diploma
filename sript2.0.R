@@ -698,7 +698,7 @@ cifra <- 9
 
 uga <- ts(ts_real_inf[1:(length(ts_real_inf) - 36)], start = start, frequency = 12)
 
-benchmark_2020 <- forecast::Arima(uga, order = c(1,1,1))
+benchmark_2020 <- forecast::Arima(uga, order = c(1,0,0))
 forecast::auto.arima(uga)
 
 
@@ -757,7 +757,7 @@ b_2023 <- c(benchmark_2023$aic, benchmark_2023$aicc, benchmark_2023$bic, mae_202
 
 
 three_key_benchmarks <- matrix(c(b_2020, b_2022, b_2023), nrow = 3, ncol = length(b_2020), byrow = TRUE)
-
+three_key_benchmarks
 
 
 
