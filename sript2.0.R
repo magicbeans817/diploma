@@ -311,8 +311,13 @@ if (new_data == 0){
     
     
     
-    cifry <- 9
+    # Plot ACF
+    acf(ts_real_inf, main = paste("ACF - Inflation, (2004 -", end[1],")"))
     
+    # Plot PACF
+    pacf(ts_real_inf, main = paste("PACF - Inflation, (2004 -", end[1],")"))
+    
+    cifry <- 9
     
     ######################################################################################################
     for (i in 1:ncol(gt_dss)) {
@@ -439,11 +444,7 @@ if (new_data == 0){
                 
                 # mae, mse, rmse
                 
-                fitted_values <- fitted(arima_model)
-                if(sum(is.na(fitted_values)) > 0){
-                  print(sum(is.na(fitted_values))/length(fitted_values))
-                  cat("Och muj boze")
-                }
+                fitted_values <- fitted(arima_model)   
                 
                 
                 if(promenna == "posun_vpred"){
@@ -460,13 +461,15 @@ if (new_data == 0){
                 
                 # Mean Absolute Error (MAE)
                 mae <- mean(abs(residuals))
+                mae <- round(mae, digits = cifry)
                 
                 # Mean Squared Error (MSE)
                 mse <- mean(residuals^2)
+                mse <- round(mse, digits = cifry)
                 
                 # Root Mean Squared Error (RMSE)
                 rmse <- sqrt(mse)
-                
+                rmse <- round(rmse, digits = cifry)
                 
                 
                 if (rozeznani_do_tabulky == "regresor") {
@@ -507,13 +510,15 @@ if (new_data == 0){
                 
                 # Mean Absolute Error (MAE)
                 b_mae <- mean(abs(residuals))
+                b_mae <- round(b_mae, digits = cifry)
                 
                 # Mean Squared Error (MSE)
                 b_mse <- mean(residuals^2)
+                b_mse <- round(b_mse, digits = cifry)
                 
                 # Root Mean Squared Error (RMSE)
                 b_rmse <- sqrt(b_mse)
-                
+                b_rmse <- round(b_rmse, digits = cifry)
                 
                 informace <- c(as.character(colnames(gt_dss)[i]), p_value, moje_aic, moje_aicc, moje_bic, ar, d, ma, co,rozeznani_do_tabulky, 
                                srovnavaci_model$aic, srovnavaci_model$aicc, srovnavaci_model$bic, mae, mse, rmse, b_mae, b_mse, b_rmse)
@@ -663,14 +668,101 @@ min_rows_delay
 
 
 
+result <- tabulka_arima_modelu %>%
+  group_by(row_names, promenna) %>%
+  filter(benchmark == min(benchmark) | model == min(model)) %>%
+  ungroup()
+
+
+View(tabulka_arima_modelu)
+View(min_rows)
+View(min_rows_delay)
+View(result)
+
+nrow(result)
+result <- result %>%
+  mutate_at(vars(-row_names, -promenna, -lag), as.numeric)
+
+
+sum(result[,"vyslednice"]> 0)
+sum((result$rmse-result$b_rmse)>0)
+sum((result$mae-result$b_mae)>0)
+
+######################################################################################################
+# three key benchmark models motherfucker!
+
+cifra <- 9
+
+# 2004 - 2020
+
+
+uga <- ts(ts_real_inf[1:(length(ts_real_inf) - 36)], start = start, frequency = 12)
+
+benchmark_2020 <- forecast::Arima(uga, order = c(1,1,1))
+forecast::auto.arima(uga)
+
+
+residuals_2020 <- uga - fitted(benchmark_2020)
+
+mae_2020 <- mean(abs(residuals_2020))
+mae_2020 <- round(mae_2020, digits = cifra)
+
+mse_2020 <- mean(residuals_2020^2)
+mse_2020 <- round(mse_2020, digits = cifra)
+
+rmse_2020 <- sqrt(mse_2020)
+rmse_2020 <- round(rmse_2020, digits = cifra)
+
+# 2004 - 2022
+
+
+
+buga <- ts(ts_real_inf[1:(length(ts_real_inf) - 12)], start = start, frequency = 12)
+          
+benchmark_2022 <- forecast::Arima(buga, order = c(1,1,1))
+forecast::auto.arima(buga)
+
+residuals_2022 <- buga - fitted(benchmark_2022)
+
+mae_2022 <- mean(abs(residuals_2022))
+mae_2022 <- round(mae_2022, digits = cifra)
+
+mse_2022 <- mean(residuals_2022^2)
+mse_2022 <- round(mse_2022, digits = cifra)
+
+rmse_2022 <- sqrt(mse_2022)
+rmse_2022 <- round(rmse_2022, digits = cifra)
+
+# 2004 - 2023
+
+benchmark_2023 <- forecast::Arima(ts_real_inf, order = c(1,1,1))
+forecast::auto.arima(ts_real_inf)
+
+
+residuals_2023 <- ts_real_inf - fitted(benchmark_2023)
+
+mae_2023 <- mean(abs(residuals_2023))
+mae_2023 <- round(mae_2023, digits = cifra)
+
+mse_2023 <- mean(residuals_2023^2)
+mse_2023 <- round(mse_2023, digits = cifra)
+
+rmse_2023 <- sqrt(mse_2023)
+rmse_2023 <- round(rmse_2023, digits = cifra)
+
+
+b_2020 <- c(benchmark_2020$aic, benchmark_2020$aicc, benchmark_2020$bic, mae_2020, mse_2020, rmse_2020)
+b_2022 <- c(benchmark_2022$aic, benchmark_2022$aicc, benchmark_2022$bic, mae_2022, mse_2022, rmse_2022)
+b_2023 <- c(benchmark_2023$aic, benchmark_2023$aicc, benchmark_2023$bic, mae_2023, mse_2023, rmse_2023)
+
+
+three_key_benchmarks <- matrix(c(b_2020, b_2022, b_2023), nrow = 3, ncol = length(b_2020), byrow = TRUE)
 
 
 
 
 
-
-
-
+# sejvni env
 
 
 
