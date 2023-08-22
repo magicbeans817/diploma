@@ -713,13 +713,16 @@ mse_2020 <- round(mse_2020, digits = cifra)
 rmse_2020 <- sqrt(mse_2020)
 rmse_2020 <- round(rmse_2020, digits = cifra)
 
+
+
+
+
+
 # 2004 - 2022
-
-
 
 buga <- ts(ts_real_inf[1:(length(ts_real_inf) - 12)], start = start, frequency = 12)
           
-benchmark_2022 <- forecast::Arima(buga, order = c(1,1,1))
+benchmark_2022 <- forecast::Arima(buga, order = c(1,0,1))
 forecast::auto.arima(buga)
 
 residuals_2022 <- buga - fitted(benchmark_2022)
@@ -735,8 +738,8 @@ rmse_2022 <- round(rmse_2022, digits = cifra)
 
 # 2004 - 2023
 
-benchmark_2023 <- forecast::Arima(ts_real_inf, order = c(1,1,1))
-forecast::auto.arima(ts_real_inf)
+benchmark_2023 <- forecast::Arima(ts_real_inf, order = c(3,0,2))
+
 
 
 residuals_2023 <- ts_real_inf - fitted(benchmark_2023)
@@ -750,6 +753,28 @@ mse_2023 <- round(mse_2023, digits = cifra)
 rmse_2023 <- sqrt(mse_2023)
 rmse_2023 <- round(rmse_2023, digits = cifra)
 
+og <- forecast::auto.arima(ts_real_inf)
+
+
+# Extract fitted values
+fitted_values <- fitted(og)
+
+# Calculate residuals
+residuals <- ts_real_inf - fitted_values
+
+# Calculate MAE
+mae <- mean(abs(residuals))
+
+# Calculate MSE
+mse <- mean(residuals^2)
+
+# Calculate RMSE
+rmse <- sqrt(mse)
+
+# Print the results
+cat("MAE:", mae, "\n")
+cat("MSE:", mse, "\n")
+cat("RMSE:", rmse, "\n")
 
 b_2020 <- c(benchmark_2020$aic, benchmark_2020$aicc, benchmark_2020$bic, mae_2020, mse_2020, rmse_2020)
 b_2022 <- c(benchmark_2022$aic, benchmark_2022$aicc, benchmark_2022$bic, mae_2022, mse_2022, rmse_2022)
@@ -759,7 +784,7 @@ b_2023 <- c(benchmark_2023$aic, benchmark_2023$aicc, benchmark_2023$bic, mae_202
 three_key_benchmarks <- matrix(c(b_2020, b_2022, b_2023), nrow = 3, ncol = length(b_2020), byrow = TRUE)
 three_key_benchmarks
 
-
+View(three_key_benchmarks)
 
 
 # sejvni env
