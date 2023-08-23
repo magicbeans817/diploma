@@ -324,7 +324,7 @@ if (new_data == 0){
       print(colnames(gt_dss)[i])
       for (d in 0:1) {
         for (ma in 1:3) {
-          for (ar in 1:3) {
+          for (ar in 0:3) {
           
             
             debug_print(i)
@@ -333,7 +333,7 @@ if (new_data == 0){
             regresor <- regresor / regresor[1] * ts_real_inf[1]
             #print(regresor)
               
-            for (posun in 0:36) {
+            for (posun in 0:12) {
                 
                   ext_regressor <- as.vector(regresor)
                   ext_regressor <- lag(ext_regressor, posun)
@@ -412,8 +412,8 @@ if (new_data == 0){
                 rmse <- sqrt(mse)
                 rmse <- round(rmse, digits = cifry)
                 
-                  
-                  srovnavaci_model <- try(forecast::Arima(ts_real_inf, order = c(ar,d,ma)))
+                  novy_regresor <- ts_real_inf[1:(length(ts_real_inf)-posun)]
+                  srovnavaci_model <- try(forecast::Arima(novy_regresor, order = c(ar,d,ma)))
                   srovnavaci_vektor <- c(as.character(ar), as.character(d), as.character(ma), srovnavaci_model$aic, srovnavaci_model$aicc, srovnavaci_model$bic)
                   originalni_modely <- rbind(originalni_modely,srovnavaci_vektor)
                 
@@ -422,7 +422,7 @@ if (new_data == 0){
                 
                 fitted_values <- fitted(srovnavaci_model)
                   
-                  residuals <- ts_real_inf - fitted_values
+                  residuals <- novy_regresor - fitted_values
                   
                 
                 # Mean Absolute Error (MAE)
@@ -560,6 +560,63 @@ tabulka_arima_modelu$row_names <- gsub("\\.\\.\\.", "/", tabulka_arima_modelu$ro
 tabulka_arima_modelu$row_names <- gsub("(/[^/]*)/.*", "\\1", tabulka_arima_modelu$row_names)
 
 
+#sejvuju env jako env2
+
+{
+
+pomocna_tabulka <- tabulka_arima_modelu[, c("row_names", "posun", "AR", "I", "MA")]
+
+pomocna_tabulka <- unique(pomocna_tabulka)
+
+pomocna_tabulka$pom_AIC <- 0
+pomocna_tabulka$pom_AICc <- 0
+pomocna_tabulka$pom_BIC <- 0
+pomocna_tabulka$pom_mae <- 0
+pomocna_tabulka$pom_mse <- 0
+pomocna_tabulka$pom_rmse <- 0
+
+cifra <- 9
+
+pomocna_tabulka <- pomocna_tabulka %>%
+  mutate_at(vars(-row_names), as.numeric)
+
+for (i in 1:nrow(pomocna_tabulka)) {
+  posun <- pomocna_tabulka[i, "posun"]
+  data <- ts_real_inf[1:(length(tabulka_arima_modelu)-posun)]
+  ar <- pomocna_tabulka[i, "AR"]
+  dif <- pomocna_tabulka[i, "I"]
+  ma <- pomocna_tabulka[i, "MA"]
+  print(ma)
+  orderos <- c(ar, dif , ma)
+  print(orderos)
+  model <- try(forecast::Arima(data, order = orderos))
+  
+  if (!inherits(arima_model, "try-error")) {
+    # Store the ARIMA model in the list if no error occurred
+  } else {
+    # Print a message and continue to the next iteration if an error occurred
+    cat("Error encountered for ARIMA(", i) # . Skipping this model.\n")
+    next  # Continue to the next iteration
+  }
+  
+  print(model$aic)
+  pomocna_tabulka[i, "pom_AIC"] <- model$aic
+  pomocna_tabulka[i, "pom_AICc"] <- model$aicc
+  pomocna_tabulka[i, "pom_BIC"] <- model$bic
+  
+  residuals <- data - fitted(model)
+  
+  pomocna_tabulka[i, "pom_mae"] <- round(mean(abs(residuals)), cifra)
+  pomocna_tabulka[i, "pom_mse"] <- round(mean(residuals^2), cifra)
+  pomocna_tabulka[i, "pom_rmse"] <- round(sqrt(mean(residuals^2)), cifra)
+}
+
+gog <- merge(tabulka_arima_modelu, three_key_benchmarks, by = c("row_names", "posun", "AR", "I", "MA"))
+
+
+}
+
+{
 ######################################################################################################
 # three key benchmark models motherfucker!
 
@@ -657,6 +714,7 @@ three_key_benchmarks
 
 
 tabulka_arima_modelu <- merge(tabulka_arima_modelu, three_key_benchmarks, by = "row_names")
+}
 
 
 
