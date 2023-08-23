@@ -93,7 +93,7 @@ start <- c(rok, mesic)
 
 
 
-jmena_sloupecku <- c("promenna", "p-value", "AIC","AICc","BIC", "AR", "I", "MA", "coef","lag", "sAIC", "sAICc","sBIC", 
+jmena_sloupecku <- c("promenna", "p-value","posun", "AIC","AICc","BIC", "AR", "I", "MA", "coef","lag", "sAIC", "sAICc","sBIC", 
                      "mae", "mse", "rmse", "b_mae", "b_mse", "b_rmse")
 pocet_sloupecku <- length(jmena_sloupecku)
 
@@ -333,46 +333,31 @@ if (new_data == 0){
             regresor <- regresor / regresor[1] * ts_real_inf[1]
             #print(regresor)
             
-            for (promenna in c("regresor","delay", "posun_vpred")) {
+            for (promenna in c("regresor","delay")){    #, "posun_vpred")) {
+              
+            for (posun in 1:12) {
               
               rozeznani_do_tabulky <- promenna
               
-              if (promenna == "regresor") {
+              if (promenna == "regresor" & posun == 1) {
                 
                 arima_model <- try(forecast::Arima(ts_real_inf, order = c(ar,d,ma), xreg = regresor))
                 
                 
               } else if(promenna == "delay"){
                 
-                ext_regressor <- regresor
-                if(bum == 1){
-                #future_values <- opposite_lag(ext_regressor, 1)
-                posun <- 1
-                future_values <- stats::lag(ext_regressor, posun)
-                ext_regressors <- ts(future_values[-(1:posun)], start = c(start[1], (start[2])), frequency = 12)
-                #ext_regressors <- ts(regresor, start = c(start[1], (start[2]+1)))
-                arima_model <- try(forecast::Arima(ts_real_inf_3, order = c(ar,d,ma), xreg = ext_regressors))
-                } else {
-                  ext_regressor <- as.vector(ext_regressor)
+                  ext_regressor <- as.vector(regresor)
                   ext_regressor <- lag(ext_regressor, posun)
                   ext_regressor <- ts(ext_regressor, start = c(start[1], (start[2])), frequency = 12)
                   
 
                   arima_model <- try(forecast::Arima(ts_real_inf, order = c(ar,d,ma), xreg = ext_regressor))
-                }
-                
-                
-                
-                #print(ext_regressors)
-                #print(ts_real_inf_3)
-                #print("Konec")
                 
               } else if(promenna == "posun_vpred") {
                 
                 ext_regressor <- regresor
                 if(bum == 1){
                   ext_regressor <- regresor
-                  posun <- 1
                   future_values <- opposite_lag(ext_regressor, posun)
                   
                   
@@ -520,7 +505,7 @@ if (new_data == 0){
                 b_rmse <- sqrt(b_mse)
                 b_rmse <- round(b_rmse, digits = cifry)
                 
-                informace <- c(as.character(colnames(gt_dss)[i]), p_value, moje_aic, moje_aicc, moje_bic, ar, d, ma, co,rozeznani_do_tabulky, 
+                informace <- c(as.character(colnames(gt_dss)[i]), p_value, posun, moje_aic, moje_aicc, moje_bic, ar, d, ma, co,rozeznani_do_tabulky, 
                                srovnavaci_model$aic, srovnavaci_model$aicc, srovnavaci_model$bic, mae, mse, rmse, b_mae, b_mse, b_rmse)
                 
                 
@@ -566,12 +551,15 @@ if (new_data == 0){
                 debug_print(colnames(gt_dss)[i])
               }
             }
+            }
           }
         }
       }
-    }
+    
+  }
     print(paste("Pocet statisticky signifikantnich promennych je", pocet_ss))
-    print(ssm)
+    print(paste("Tabulka arima modelu ma sloupecku:", ncol(tabulka_arima_modelu)))
+    print(paste("SSM ma sloupecku:", ncol(ssm)))
     tabulka_arima_modelu <- rbind(tabulka_arima_modelu, ssm)
   }
   
@@ -672,11 +660,6 @@ result <- tabulka_arima_modelu %>%
   ungroup()
 
 
-View(tabulka_arima_modelu)
-View(min_rows)
-View(min_rows_delay)
-View(result)
-
 nrow(result)
 result <- result %>%
   mutate_at(vars(-row_names, -promenna, -lag), as.numeric)
@@ -736,8 +719,8 @@ rmse_2022 <- round(rmse_2022, digits = cifra)
 
 # 2004 - 2023
 
-benchmark_2023 <- forecast::Arima(ts_real_inf, order = c(3,0,2))
-
+benchmark_2023 <- forecast::Arima(ts_real_inf, order = c(1,1,3))
+benchmark_2023
 
 
 residuals_2023 <- ts_real_inf - fitted(benchmark_2023)
@@ -752,7 +735,7 @@ rmse_2023 <- sqrt(mse_2023)
 rmse_2023 <- round(rmse_2023, digits = cifra)
 
 og <- forecast::auto.arima(ts_real_inf)
-
+og
 
 # Extract fitted values
 fitted_values <- fitted(og)
@@ -780,16 +763,26 @@ b_2023 <- c(benchmark_2023$aic, benchmark_2023$aicc, benchmark_2023$bic, mae_202
 
 
 three_key_benchmarks <- matrix(c(b_2020, b_2022, b_2023), nrow = 3, ncol = length(b_2020), byrow = TRUE)
-three_key_benchmarks
 colnames(three_key_benchmarks) <- c("AIC", "AICc", "BIC", "MAE", "MSE", "RMSE")
-row_names <- c("2004-2020 model", "2004 - 2022 model", "2004 - 2023 model")
+row.names(three_key_benchmarks) <- c("2004-2020 model", "2004 - 2022 model", "2004 - 2023 model")
+
+
+
+
+
+
+
 
 View(three_key_benchmarks)
+View(tabulka_arima_modelu)
+View(min_rows)
+View(min_rows_delay)
+View(result)
+
 
 
 print(xtable(three_key_benchmarks, caption = "Information criteria for three best model",
              digits = 4, type = "latex"), file = "three_key_benchmarks.tex")
-
 
 
 
