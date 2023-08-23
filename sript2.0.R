@@ -763,27 +763,11 @@ tabulka_arima_modelu <- tabulka_arima_modelu %>%
   mutate(am_mse_bb = mse - bb_mse) %>%
   mutate(am_rmse_bb = rmse - bb_rmse)
 
-
-
-
-
-
-
-
-
-
-
 View(tabulka_arima_modelu)
-
-
-
-
-
-
 
 result <- tabulka_arima_modelu %>%
   group_by(row_names, promenna, lag, posun) %>%
-  filter(benchmark == min(benchmark) | model == min(model)) %>%
+  filter(sc == min(sc) | sc_b == min(sc_bb)) %>%
   ungroup()
 
 View(result)
