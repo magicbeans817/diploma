@@ -1975,7 +1975,9 @@ if (i == 1){
 }
 
 
-
+for (bum in 0:12) {
+  print(bum)
+  }
 
 
 
