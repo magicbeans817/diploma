@@ -606,14 +606,14 @@ for (i in 1:nrow(tabulka_arima_modelu)) {
 tabulka_arima_modelu <- tabulka_arima_modelu[complete.cases(tabulka_arima_modelu), ]
 
 tabulka_arima_modelu <- tabulka_arima_modelu %>%
-  mutate(across(c("AIC", "AICc","BIC", "sAIC", "sAICc","sBIC"), as.numeric))
+  mutate(across(c("AIC", "AICc","BIC", "b_AIC", "b_AICc","b_BIC"), as.numeric))
 
-tabulka_arima_modelu$model <-  tabulka_arima_modelu$AIC + tabulka_arima_modelu$AICc + tabulka_arima_modelu$BIC
-tabulka_arima_modelu$benchmark <- tabulka_arima_modelu$sAIC + tabulka_arima_modelu$sAICc + tabulka_arima_modelu$sBIC
-tabulka_arima_modelu$vyslednice <- tabulka_arima_modelu$model - tabulka_arima_modelu$benchmark
+tabulka_arima_modelu$sc <-  tabulka_arima_modelu$AIC + tabulka_arima_modelu$AICc + tabulka_arima_modelu$BIC
+tabulka_arima_modelu$sc_b <- tabulka_arima_modelu$b_AIC + tabulka_arima_modelu$b_AICc + tabulka_arima_modelu$b_BIC
+tabulka_arima_modelu$vyslednice <- tabulka_arima_modelu$sc - tabulka_arima_modelu$sc_b
 
 tabulka_arima_modelu$model_bez_bic <-  tabulka_arima_modelu$AIC + tabulka_arima_modelu$AICc
-tabulka_arima_modelu$benchmark_bez_bic <- tabulka_arima_modelu$sAIC + tabulka_arima_modelu$sAICc
+tabulka_arima_modelu$benchmark_bez_bic <- tabulka_arima_modelu$b_AIC + tabulka_arima_modelu$b_AICc
 tabulka_arima_modelu$vyslednice_bez_bic <- tabulka_arima_modelu$model_bez_bic - tabulka_arima_modelu$benchmark_bez_bic
 
 
@@ -653,11 +653,6 @@ mse_2020 <- round(mse_2020, digits = cifra)
 
 rmse_2020 <- sqrt(mse_2020)
 rmse_2020 <- round(rmse_2020, digits = cifra)
-
-
-
-
-
 
 # 2004 - 2022
 
@@ -737,8 +732,36 @@ tabulka_arima_modelu <- merge(tabulka_arima_modelu, three_key_benchmarks, by = "
 tabulka_arima_modelu <- subset(tabulka_arima_modelu, select = c("row_names", "promenna", "coef", "p-value", "lag", "posun", "AR", "I", "MA", 
                                                                 "AIC", "AICc", "BIC", "b_AIC","b_AICc","b_BIC", "bb_AIC", "bb_AICc", "bb_BIC",
                                                                 "mae", "mse", "rmse", "b_mae", "b_mse", "b_rmse", "bb_mae", "bb_mse", "bb_rmse",
-                                                                "model", "benchmark", "vyslednice",
-                                                                "model_bez_bic", "benchmark_bez_bic", "vyslednice_bez_bic"))
+                                                                "sc", "sc_b"))
+
+
+
+tabulka_arima_modelu 
+
+
+tabulka_arima_modelu <- tabulka_arima_modelu %>%
+  group_by(row_names, promenna, posun)
+
+index <- tabulka_arima_modelu$lag == "regresor"
+
+# Change "posun" to "1" where the condition is TRUE
+tabulka_arima_modelu$posun[index] <- "1"
+
+tabulka_arima_modelu <- unique(tabulka_arima_modelu)
+
+tabulka_arima_modelu <- tabulka_arima_modelu %>%
+  mutate_at(vars(-row_names, -promenna, -lag), as.numeric)
+
+tabulka_arima_modelu <- tabulka_arima_modelu %>%
+  mutate(sc_bb = bb_AIC + bb_AICc + bb_BIC) %>%
+  mutate(msc_b = sc-sc_b) %>%
+  mutate(msc_bb = sc - sc_bb) %>%
+  mutate(am_mae_b = mae - b_mae) %>%
+  mutate(am_mse_b = mse - b_mse) %>%
+  mutate(am_rmse_b = rmse - b_rmse) %>%
+  mutate(am_mae_bb = mae - bb_mae) %>%
+  mutate(am_mse_bb = mse - bb_mse) %>%
+  mutate(am_rmse_bb = rmse - bb_rmse)
 
 
 
@@ -750,9 +773,20 @@ tabulka_arima_modelu <- subset(tabulka_arima_modelu, select = c("row_names", "pr
 
 
 
+View(tabulka_arima_modelu)
 
 
 
+
+
+
+
+result <- tabulka_arima_modelu %>%
+  group_by(row_names, promenna, lag, posun) %>%
+  filter(benchmark == min(benchmark) | model == min(model)) %>%
+  ungroup()
+
+View(result)
 
 # Print the updated dataframe
 
@@ -780,10 +814,7 @@ min_rows_delay
 
 
 
-result <- tabulka_arima_modelu %>%
-  group_by(row_names, promenna) %>%
-  filter(benchmark == min(benchmark) | model == min(model)) %>%
-  ungroup()
+
 
 
 nrow(result)
