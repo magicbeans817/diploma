@@ -290,7 +290,7 @@ if (new_data == 0){
     # Srovnani s arimou bez external regresoru
     
     arima_model <- forecast::Arima(ts_real_inf, order = c(ar,d,ma))
-    ssm <- matrix(c("originalni model", NA, arima_model$aic, arima_model$aicc, arima_model$bic, ar, d, ma, 0, "lag", "Vojta", "je", "debil",
+    ssm <- matrix(c("originalni model", NA, arima_model$aic, arima_model$aicc, arima_model$bic, ar, d, ma, 0, "Vojta", "je", "debil",
                     "mae", "mse", "rmse", "b_mae", "b_mse", "b_rmse"), nrow = 1, ncol = length(jmena_sloupecku))
     colnames(ssm) <- jmena_sloupecku
     
@@ -332,19 +332,8 @@ if (new_data == 0){
             regresor <- ts(data = gt_dss[,i], start = c(2004, 1), end = end, frequency = 12)
             regresor <- regresor / regresor[1] * ts_real_inf[1]
             #print(regresor)
-            
-            for (promenna in c("regresor","delay")){    #, "posun_vpred")) {
               
-            for (posun in 1:12) {
-              
-              rozeznani_do_tabulky <- promenna
-              
-              if (promenna == "regresor" & posun == 1) {
-                
-                arima_model <- try(forecast::Arima(ts_real_inf, order = c(ar,d,ma), xreg = regresor))
-                
-                
-              } else if(promenna == "delay"){
+            for (posun in 0:36) {
                 
                   ext_regressor <- as.vector(regresor)
                   ext_regressor <- lag(ext_regressor, posun)
@@ -352,30 +341,6 @@ if (new_data == 0){
                   
 
                   arima_model <- try(forecast::Arima(ts_real_inf, order = c(ar,d,ma), xreg = ext_regressor))
-                
-              } else if(promenna == "posun_vpred") {
-                
-                ext_regressor <- regresor
-                if(bum == 1){
-                  ext_regressor <- regresor
-                  future_values <- opposite_lag(ext_regressor, posun)
-                  
-                  
-                  # Remove the last row, as it contains NA for future_values
-                  ext_regressors <- ts(future_values[-length(future_values)], start = start, frequency = 12) #ext_regressors[-nrow(ext_regressors), ]
-                  
-                  arima_model <- try(forecast::Arima(ts_real_inf_2, order = c(ar,d,ma), xreg = ext_regressors))
-                  
-                } else {
-                  ts_real_inf_4 <- ts_real_inf
-                  ext_regressor <- opposite_lag(ext_regressor, posun)
-                  ext_regressor <- ts(ext_regressor, start = c(start[1], (start[2])), frequency = 12)
-                  
-                  arima_model <- try(forecast::Arima(ts_real_inf_4, order = c(ar,d,ma), xreg = ext_regressor))
-                }
-                
-
-              }
               
               
               # Pro pripad multiple regression
@@ -430,17 +395,8 @@ if (new_data == 0){
                 # mae, mse, rmse
                 
                 fitted_values <- fitted(arima_model)   
-                
-                
-                if(promenna == "posun_vpred"){
-                  
-                  residuals <- ts_real_inf_4 - fitted_values
-                  
-                } else {
                   
                   residuals <- ts_real_inf - fitted_values
-                  
-                }
                 
                 residuals <- na.omit(residuals)
                 
@@ -456,42 +412,18 @@ if (new_data == 0){
                 rmse <- sqrt(mse)
                 rmse <- round(rmse, digits = cifry)
                 
-                
-                if (rozeznani_do_tabulky == "regresor") {
                   
                   srovnavaci_model <- try(forecast::Arima(ts_real_inf, order = c(ar,d,ma)))
                   srovnavaci_vektor <- c(as.character(ar), as.character(d), as.character(ma), srovnavaci_model$aic, srovnavaci_model$aicc, srovnavaci_model$bic)
                   originalni_modely <- rbind(originalni_modely,srovnavaci_vektor)
-                  
-                } else if (rozeznani_do_tabulky == "delay") {
-                  
-                  srovnavaci_model <- try(forecast::Arima(ts_real_inf, order = c(ar,d,ma)))
-                  srovnavaci_vektor <- c(as.character(ar), as.character(d), as.character(ma), srovnavaci_model$aic, srovnavaci_model$aicc, srovnavaci_model$bic)
-                  originalni_modely <- rbind(originalni_modely, srovnavaci_vektor)
-                  
-                  
-                } else if (rozeznani_do_tabulky == "posun_vpred") {
-                  
-                  srovnavaci_model <- try(forecast::Arima(ts_real_inf_4, order = c(ar,d,ma)))
-                  srovnavaci_vektor <- c(as.character(ar), as.character(d), as.character(ma), srovnavaci_model$aic, srovnavaci_model$aicc, srovnavaci_model$bic)
-                  originalni_modely <- rbind(originalni_modely, srovnavaci_vektor)
-                  
-                }
                 
                 
                 # benchmark mae, mse, rmse
                 
                 fitted_values <- fitted(srovnavaci_model)
-                
-                if(promenna == "posun_vpred"){
-                  
-                  residuals <- ts_real_inf_4 - fitted_values
-                  
-                } else {
                   
                   residuals <- ts_real_inf - fitted_values
                   
-                }
                 
                 # Mean Absolute Error (MAE)
                 b_mae <- mean(abs(residuals))
@@ -505,7 +437,7 @@ if (new_data == 0){
                 b_rmse <- sqrt(b_mse)
                 b_rmse <- round(b_rmse, digits = cifry)
                 
-                informace <- c(as.character(colnames(gt_dss)[i]), p_value, posun, moje_aic, moje_aicc, moje_bic, ar, d, ma, co,rozeznani_do_tabulky, 
+                informace <- c(as.character(colnames(gt_dss)[i]), p_value, posun, moje_aic, moje_aicc, moje_bic, ar, d, ma, co, NA, 
                                srovnavaci_model$aic, srovnavaci_model$aicc, srovnavaci_model$bic, mae, mse, rmse, b_mae, b_mse, b_rmse)
                 
                 
@@ -524,11 +456,8 @@ if (new_data == 0){
                 
                 
                 if (DEBUG == TRUE) {
-                if (rozeznani_do_tabulky == "regresor"){
                   barvicka <- "blue"
-                } else {
-                  barvicka <- "red"
-                }
+
                 
                 
                 # Plot the actual and fitted values
@@ -551,7 +480,7 @@ if (new_data == 0){
                 debug_print(colnames(gt_dss)[i])
               }
             }
-            }
+            
           }
         }
       }
@@ -598,10 +527,12 @@ tabulka_arima_modelu <- tabulka_arima_modelu_zaloha
 print(tabulka_arima_modelu)
 
 for (i in 1:nrow(tabulka_arima_modelu)) {
-  if (tabulka_arima_modelu[i, "lag"] == "lag") {
+  if (tabulka_arima_modelu[i, "promenna"] == "originalni model") {
     tabulka_arima_modelu[i,] <- NA
   }
 }
+
+tabulka_arima_modelu$lag <- NULL
 
 tabulka_arima_modelu <- tabulka_arima_modelu[complete.cases(tabulka_arima_modelu), ]
 
@@ -729,7 +660,7 @@ tabulka_arima_modelu <- merge(tabulka_arima_modelu, three_key_benchmarks, by = "
 
 
 
-tabulka_arima_modelu <- subset(tabulka_arima_modelu, select = c("row_names", "promenna", "coef", "p-value", "lag", "posun", "AR", "I", "MA", 
+tabulka_arima_modelu <- subset(tabulka_arima_modelu, select = c("row_names", "promenna", "coef", "p-value", "posun", "AR", "I", "MA", 
                                                                 "AIC", "AICc", "BIC", "b_AIC","b_AICc","b_BIC", "bb_AIC", "bb_AICc", "bb_BIC",
                                                                 "mae", "mse", "rmse", "b_mae", "b_mse", "b_rmse", "bb_mae", "bb_mse", "bb_rmse",
                                                                 "sc", "sc_b"))
@@ -742,15 +673,8 @@ tabulka_arima_modelu
 tabulka_arima_modelu <- tabulka_arima_modelu %>%
   group_by(row_names, promenna, posun)
 
-index <- tabulka_arima_modelu$lag == "regresor"
-
-# Change "posun" to "1" where the condition is TRUE
-tabulka_arima_modelu$posun[index] <- "1"
-
-tabulka_arima_modelu <- unique(tabulka_arima_modelu)
-
 tabulka_arima_modelu <- tabulka_arima_modelu %>%
-  mutate_at(vars(-row_names, -promenna, -lag), as.numeric)
+  mutate_at(vars(-row_names, -promenna), as.numeric)
 
 tabulka_arima_modelu <- tabulka_arima_modelu %>%
   mutate(sc_bb = bb_AIC + bb_AICc + bb_BIC) %>%
@@ -766,13 +690,49 @@ tabulka_arima_modelu <- tabulka_arima_modelu %>%
 View(tabulka_arima_modelu)
 
 result <- tabulka_arima_modelu %>%
-  group_by(row_names, promenna, lag, posun) %>%
+  group_by(row_names, promenna, posun) %>%
   filter(sc == min(sc) | sc_b == min(sc_bb)) %>%
   ungroup()
 
 View(result)
 
 # Print the updated dataframe
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
