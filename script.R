@@ -344,7 +344,7 @@ if (new_data == 0){
                 
               } else if(promenna == "delay"){
                 
-                ext_regressor <- as.vector(ext_regressor)
+                ext_regressor <- as.vector(regresor)
                 ext_regressor <- lag(ext_regressor, posun)
                 ext_regressor <- ts(ext_regressor, start = c(start[1], (start[2])), frequency = 12)
                 
