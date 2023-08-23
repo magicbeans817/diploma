@@ -93,7 +93,7 @@ start <- c(rok, mesic)
 
 
 
-jmena_sloupecku <- c("promenna", "p-value","posun", "AIC","AICc","BIC", "AR", "I", "MA", "coef","lag", "sAIC", "sAICc","sBIC", 
+jmena_sloupecku <- c("promenna", "p-value","posun", "AIC","AICc","BIC", "AR", "I", "MA", "coef","lag", "b_AIC", "b_AICc","b_BIC", 
                      "mae", "mse", "rmse", "b_mae", "b_mse", "b_rmse")
 pocet_sloupecku <- length(jmena_sloupecku)
 
@@ -629,6 +629,116 @@ tabulka_arima_modelu$row_names <- gsub("\\.\\.\\.", "/", tabulka_arima_modelu$ro
 tabulka_arima_modelu$row_names <- gsub("(/[^/]*)/.*", "\\1", tabulka_arima_modelu$row_names)
 
 
+######################################################################################################
+# three key benchmark models motherfucker!
+
+cifra <- 9
+
+# 2004 - 2020
+
+
+uga <- ts(ts_real_inf[1:(length(ts_real_inf) - 36)], start = start, frequency = 12)
+
+benchmark_2020 <- forecast::Arima(uga, order = c(1,0,0))
+forecast::auto.arima(uga)
+
+
+residuals_2020 <- uga - fitted(benchmark_2020)
+
+mae_2020 <- mean(abs(residuals_2020))
+mae_2020 <- round(mae_2020, digits = cifra)
+
+mse_2020 <- mean(residuals_2020^2)
+mse_2020 <- round(mse_2020, digits = cifra)
+
+rmse_2020 <- sqrt(mse_2020)
+rmse_2020 <- round(rmse_2020, digits = cifra)
+
+
+
+
+
+
+# 2004 - 2022
+
+buga <- ts(ts_real_inf[1:(length(ts_real_inf) - 12)], start = start, frequency = 12)
+
+benchmark_2022 <- forecast::Arima(buga, order = c(1,0,1))
+forecast::auto.arima(buga)
+
+residuals_2022 <- buga - fitted(benchmark_2022)
+
+mae_2022 <- mean(abs(residuals_2022))
+mae_2022 <- round(mae_2022, digits = cifra)
+
+mse_2022 <- mean(residuals_2022^2)
+mse_2022 <- round(mse_2022, digits = cifra)
+
+rmse_2022 <- sqrt(mse_2022)
+rmse_2022 <- round(rmse_2022, digits = cifra)
+
+# 2004 - 2023
+
+benchmark_2023 <- forecast::Arima(ts_real_inf, order = c(1,1,3))
+benchmark_2023
+
+
+residuals_2023 <- ts_real_inf - fitted(benchmark_2023)
+
+mae_2023 <- mean(abs(residuals_2023))
+mae_2023 <- round(mae_2023, digits = cifra)
+
+mse_2023 <- mean(residuals_2023^2)
+mse_2023 <- round(mse_2023, digits = cifra)
+
+rmse_2023 <- sqrt(mse_2023)
+rmse_2023 <- round(rmse_2023, digits = cifra)
+
+og <- forecast::auto.arima(ts_real_inf)
+og
+
+# Extract fitted values
+fitted_values <- fitted(og)
+
+# Calculate residuals
+residuals <- ts_real_inf - fitted_values
+
+# Calculate MAE
+mae <- mean(abs(residuals))
+
+# Calculate MSE
+mse <- mean(residuals^2)
+
+# Calculate RMSE
+rmse <- sqrt(mse)
+
+# Print the results
+cat("MAE:", mae, "\n")
+cat("MSE:", mse, "\n")
+cat("RMSE:", rmse, "\n")
+
+b_2020 <- c("2020/2", benchmark_2020$aic, benchmark_2020$aicc, benchmark_2020$bic, mae_2020, mse_2020, rmse_2020)
+b_2022 <- c("2022/2",benchmark_2022$aic, benchmark_2022$aicc, benchmark_2022$bic, mae_2022, mse_2022, rmse_2022)
+b_2023 <- c("2023/2",benchmark_2023$aic, benchmark_2023$aicc, benchmark_2023$bic, mae_2023, mse_2023, rmse_2023)
+
+
+three_key_benchmarks <- matrix(c(b_2020, b_2022, b_2023), nrow = 3, ncol = length(b_2020), byrow = TRUE)
+colnames(three_key_benchmarks) <- c("row_names","bb_AIC", "bb_AICc", "bb_BIC", "bb_mae", "bb_mse", "bb_rmse")
+row.names(three_key_benchmarks) <- c("2020/2", "2022/2", "2023/2")
+three_key_benchmarks <- as.data.frame(three_key_benchmarks)
+
+three_key_benchmarks
+
+
+tabulka_arima_modelu <- merge(tabulka_arima_modelu, three_key_benchmarks, by = "row_names")
+
+
+
+tabulka_arima_modelu <- subset(tabulka_arima_modelu, select = c("row_names", "promenna", "coef", "p-value", "lag", "posun", "AR", "I", "MA", 
+                                                                "AIC", "AICc", "BIC", "b_AIC","b_AICc","b_BIC", "bb_AIC", "bb_AICc", "bb_BIC",
+                                                                "mae", "mse", "rmse", "b_mae", "b_mse", "b_rmse", "bb_mae", "bb_mse", "bb_rmse",
+                                                                "model", "benchmark", "vyslednice",
+                                                                "model_bez_bic", "benchmark_bez_bic", "vyslednice_bez_bic"))
 
 
 
@@ -685,102 +795,6 @@ sum(result[,"vyslednice"]> 0)
 sum((result$rmse-result$b_rmse)>0)
 sum((result$mae-result$b_mae)>0)
 
-######################################################################################################
-# three key benchmark models motherfucker!
-
-cifra <- 9
-
-# 2004 - 2020
-
-
-uga <- ts(ts_real_inf[1:(length(ts_real_inf) - 36)], start = start, frequency = 12)
-
-benchmark_2020 <- forecast::Arima(uga, order = c(1,0,0))
-forecast::auto.arima(uga)
-
-
-residuals_2020 <- uga - fitted(benchmark_2020)
-
-mae_2020 <- mean(abs(residuals_2020))
-mae_2020 <- round(mae_2020, digits = cifra)
-
-mse_2020 <- mean(residuals_2020^2)
-mse_2020 <- round(mse_2020, digits = cifra)
-
-rmse_2020 <- sqrt(mse_2020)
-rmse_2020 <- round(rmse_2020, digits = cifra)
-
-
-
-
-
-
-# 2004 - 2022
-
-buga <- ts(ts_real_inf[1:(length(ts_real_inf) - 12)], start = start, frequency = 12)
-          
-benchmark_2022 <- forecast::Arima(buga, order = c(1,0,1))
-forecast::auto.arima(buga)
-
-residuals_2022 <- buga - fitted(benchmark_2022)
-
-mae_2022 <- mean(abs(residuals_2022))
-mae_2022 <- round(mae_2022, digits = cifra)
-
-mse_2022 <- mean(residuals_2022^2)
-mse_2022 <- round(mse_2022, digits = cifra)
-
-rmse_2022 <- sqrt(mse_2022)
-rmse_2022 <- round(rmse_2022, digits = cifra)
-
-# 2004 - 2023
-
-benchmark_2023 <- forecast::Arima(ts_real_inf, order = c(1,1,3))
-benchmark_2023
-
-
-residuals_2023 <- ts_real_inf - fitted(benchmark_2023)
-
-mae_2023 <- mean(abs(residuals_2023))
-mae_2023 <- round(mae_2023, digits = cifra)
-
-mse_2023 <- mean(residuals_2023^2)
-mse_2023 <- round(mse_2023, digits = cifra)
-
-rmse_2023 <- sqrt(mse_2023)
-rmse_2023 <- round(rmse_2023, digits = cifra)
-
-og <- forecast::auto.arima(ts_real_inf)
-og
-
-# Extract fitted values
-fitted_values <- fitted(og)
-
-# Calculate residuals
-residuals <- ts_real_inf - fitted_values
-
-# Calculate MAE
-mae <- mean(abs(residuals))
-
-# Calculate MSE
-mse <- mean(residuals^2)
-
-# Calculate RMSE
-rmse <- sqrt(mse)
-
-# Print the results
-cat("MAE:", mae, "\n")
-cat("MSE:", mse, "\n")
-cat("RMSE:", rmse, "\n")
-
-b_2020 <- c(benchmark_2020$aic, benchmark_2020$aicc, benchmark_2020$bic, mae_2020, mse_2020, rmse_2020)
-b_2022 <- c(benchmark_2022$aic, benchmark_2022$aicc, benchmark_2022$bic, mae_2022, mse_2022, rmse_2022)
-b_2023 <- c(benchmark_2023$aic, benchmark_2023$aicc, benchmark_2023$bic, mae_2023, mse_2023, rmse_2023)
-
-
-three_key_benchmarks <- matrix(c(b_2020, b_2022, b_2023), nrow = 3, ncol = length(b_2020), byrow = TRUE)
-colnames(three_key_benchmarks) <- c("AIC", "AICc", "BIC", "MAE", "MSE", "RMSE")
-row.names(three_key_benchmarks) <- c("2004-2020 model", "2004 - 2022 model", "2004 - 2023 model")
 
 
 
