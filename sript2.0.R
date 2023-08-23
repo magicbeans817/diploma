@@ -628,6 +628,22 @@ tabulka_arima_modelu$row_names <- gsub("\\.\\.\\.", "/", tabulka_arima_modelu$ro
 
 tabulka_arima_modelu$row_names <- gsub("(/[^/]*)/.*", "\\1", tabulka_arima_modelu$row_names)
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # Print the updated dataframe
 
 
