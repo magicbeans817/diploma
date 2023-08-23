@@ -610,7 +610,6 @@ tabulka_arima_modelu <- tabulka_arima_modelu_zaloha
 print(tabulka_arima_modelu)
 
 for (i in 1:nrow(tabulka_arima_modelu)) {
-  print(i)
   if (tabulka_arima_modelu[i, "lag"] == "lag") {
     tabulka_arima_modelu[i,] <- NA
   }
@@ -642,7 +641,6 @@ tabulka_arima_modelu$row_names <- gsub("\\.\\.\\.", "/", tabulka_arima_modelu$ro
 tabulka_arima_modelu$row_names <- gsub("(/[^/]*)/.*", "\\1", tabulka_arima_modelu$row_names)
 
 # Print the updated dataframe
-print(tabulka_arima_modelu)
 
 
 
@@ -783,8 +781,26 @@ b_2023 <- c(benchmark_2023$aic, benchmark_2023$aicc, benchmark_2023$bic, mae_202
 
 three_key_benchmarks <- matrix(c(b_2020, b_2022, b_2023), nrow = 3, ncol = length(b_2020), byrow = TRUE)
 three_key_benchmarks
+colnames(three_key_benchmarks) <- c("AIC", "AICc", "BIC", "MAE", "MSE", "RMSE")
+row_names <- c("2004-2020 model", "2004 - 2022 model", "2004 - 2023 model")
 
 View(three_key_benchmarks)
+
+
+print(xtable(three_key_benchmarks, caption = "Information criteria for three best model",
+             digits = 4, type = "latex"), file = "three_key_benchmarks.tex")
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # sejvni env
