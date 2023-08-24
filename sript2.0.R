@@ -744,7 +744,7 @@ control_result <- tabulka_arima_modelu %>%
 View(control_result)
 # Print the updated dataframe
 
-
+#sejv env jako env_arimy
 
 
 
