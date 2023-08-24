@@ -412,7 +412,13 @@ if (new_data == 0){
                 rmse <- sqrt(mse)
                 rmse <- round(rmse, digits = cifry)
                 
-                  novy_regresor <- ts_real_inf[1:(length(ts_real_inf)-posun)]
+                
+                  #novy_regresor <- as.vector(ts_real_inf)
+                  #novy_regresor <- lag(novy_regresor, posun)
+                  #novy_regresor <- ts(novy_regresor, start = c(start[1], (start[2])), frequency = 12)
+                
+                  novy_regresor <- ts_real_inf[(posun+1):length(ts_real_inf)]
+                
                   srovnavaci_model <- try(forecast::Arima(novy_regresor, order = c(ar,d,ma)))
                   srovnavaci_vektor <- c(as.character(ar), as.character(d), as.character(ma), srovnavaci_model$aic, srovnavaci_model$aicc, srovnavaci_model$bic)
                   originalni_modely <- rbind(originalni_modely,srovnavaci_vektor)
@@ -422,7 +428,7 @@ if (new_data == 0){
                 
                 fitted_values <- fitted(srovnavaci_model)
                   
-                  residuals <- novy_regresor - fitted_values
+                residuals <- na.omit(novy_regresor - fitted_values)
                   
                 
                 # Mean Absolute Error (MAE)
@@ -539,13 +545,7 @@ tabulka_arima_modelu <- tabulka_arima_modelu[complete.cases(tabulka_arima_modelu
 tabulka_arima_modelu <- tabulka_arima_modelu %>%
   mutate(across(c("AIC", "AICc","BIC", "b_AIC", "b_AICc","b_BIC"), as.numeric))
 
-tabulka_arima_modelu$sc <-  tabulka_arima_modelu$AIC + tabulka_arima_modelu$AICc + tabulka_arima_modelu$BIC
-tabulka_arima_modelu$sc_b <- tabulka_arima_modelu$b_AIC + tabulka_arima_modelu$b_AICc + tabulka_arima_modelu$b_BIC
-tabulka_arima_modelu$vyslednice <- tabulka_arima_modelu$sc - tabulka_arima_modelu$sc_b
 
-tabulka_arima_modelu$model_bez_bic <-  tabulka_arima_modelu$AIC + tabulka_arima_modelu$AICc
-tabulka_arima_modelu$benchmark_bez_bic <- tabulka_arima_modelu$b_AIC + tabulka_arima_modelu$b_AICc
-tabulka_arima_modelu$vyslednice_bez_bic <- tabulka_arima_modelu$model_bez_bic - tabulka_arima_modelu$benchmark_bez_bic
 
 
 #View(tabulka_arima_modelu)
@@ -562,8 +562,8 @@ tabulka_arima_modelu$row_names <- gsub("(/[^/]*)/.*", "\\1", tabulka_arima_model
 
 #sejvuju env jako env2
 
-{
 
+{
 pomocna_tabulka <- tabulka_arima_modelu[, c("row_names", "posun", "AR", "I", "MA")]
 
 pomocna_tabulka <- unique(pomocna_tabulka)
@@ -580,15 +580,33 @@ cifra <- 9
 pomocna_tabulka <- pomocna_tabulka %>%
   mutate_at(vars(-row_names), as.numeric)
 
-for (i in 1:nrow(pomocna_tabulka)) {
+kolik_iteraci <- nrow(pomocna_tabulka)
+}
+
+
+for (i in 1:kolik_iteraci) {
   posun <- pomocna_tabulka[i, "posun"]
-  data <- ts_real_inf[1:(length(tabulka_arima_modelu)-posun)]
+  
+  if(pomocna_tabulka[i, "posun"] == "2020/2"){
+    data <- ts_real_inf[(posun+1):(length(ts_real_inf)-36)]
+  } else if(pomocna_tabulka[i, "posun"] == "2022/2"){
+    data <- ts_real_inf[(posun+1):(length(ts_real_inf)-12)]
+  } else{
+    data <- ts_real_inf[(posun+1):length(ts_real_inf)]
+  }
+  
+  #data <- as.vector(ts_real_inf)
+  #data <- lag(data, posun)
+  #data <- ts(data, start = c(start[1], (start[2])), frequency = 12)
+  
+  data <- ts_real_inf[(posun+1):length(ts_real_inf)]
+  
   ar <- pomocna_tabulka[i, "AR"]
   dif <- pomocna_tabulka[i, "I"]
   ma <- pomocna_tabulka[i, "MA"]
-  print(ma)
   orderos <- c(ar, dif , ma)
-  print(orderos)
+  print(paste(i,"iteraci z ", kolik_iteraci))
+  
   model <- try(forecast::Arima(data, order = orderos))
   
   if (!inherits(arima_model, "try-error")) {
@@ -599,129 +617,41 @@ for (i in 1:nrow(pomocna_tabulka)) {
     next  # Continue to the next iteration
   }
   
-  print(model$aic)
+  #print(model$aic)
   pomocna_tabulka[i, "pom_AIC"] <- model$aic
   pomocna_tabulka[i, "pom_AICc"] <- model$aicc
   pomocna_tabulka[i, "pom_BIC"] <- model$bic
   
-  residuals <- data - fitted(model)
+  residuals <- na.omit(data - fitted(model))
   
   pomocna_tabulka[i, "pom_mae"] <- round(mean(abs(residuals)), cifra)
   pomocna_tabulka[i, "pom_mse"] <- round(mean(residuals^2), cifra)
   pomocna_tabulka[i, "pom_rmse"] <- round(sqrt(mean(residuals^2)), cifra)
 }
 
-gog <- merge(tabulka_arima_modelu, three_key_benchmarks, by = c("row_names", "posun", "AR", "I", "MA"))
-
-
-}
-
-{
-######################################################################################################
-# three key benchmark models motherfucker!
-
-cifra <- 9
-
-# 2004 - 2020
-
-
-uga <- ts(ts_real_inf[1:(length(ts_real_inf) - 36)], start = start, frequency = 12)
-
-benchmark_2020 <- forecast::Arima(uga, order = c(1,0,0))
-forecast::auto.arima(uga)
-
-
-residuals_2020 <- uga - fitted(benchmark_2020)
-
-mae_2020 <- mean(abs(residuals_2020))
-mae_2020 <- round(mae_2020, digits = cifra)
-
-mse_2020 <- mean(residuals_2020^2)
-mse_2020 <- round(mse_2020, digits = cifra)
-
-rmse_2020 <- sqrt(mse_2020)
-rmse_2020 <- round(rmse_2020, digits = cifra)
-
-# 2004 - 2022
-
-buga <- ts(ts_real_inf[1:(length(ts_real_inf) - 12)], start = start, frequency = 12)
-
-benchmark_2022 <- forecast::Arima(buga, order = c(1,0,1))
-forecast::auto.arima(buga)
-
-residuals_2022 <- buga - fitted(benchmark_2022)
-
-mae_2022 <- mean(abs(residuals_2022))
-mae_2022 <- round(mae_2022, digits = cifra)
-
-mse_2022 <- mean(residuals_2022^2)
-mse_2022 <- round(mse_2022, digits = cifra)
-
-rmse_2022 <- sqrt(mse_2022)
-rmse_2022 <- round(rmse_2022, digits = cifra)
-
-# 2004 - 2023
-
-benchmark_2023 <- forecast::Arima(ts_real_inf, order = c(1,1,3))
-benchmark_2023
-
-
-residuals_2023 <- ts_real_inf - fitted(benchmark_2023)
-
-mae_2023 <- mean(abs(residuals_2023))
-mae_2023 <- round(mae_2023, digits = cifra)
-
-mse_2023 <- mean(residuals_2023^2)
-mse_2023 <- round(mse_2023, digits = cifra)
-
-rmse_2023 <- sqrt(mse_2023)
-rmse_2023 <- round(rmse_2023, digits = cifra)
-
-og <- forecast::auto.arima(ts_real_inf)
-og
-
-# Extract fitted values
-fitted_values <- fitted(og)
-
-# Calculate residuals
-residuals <- ts_real_inf - fitted_values
-
-# Calculate MAE
-mae <- mean(abs(residuals))
-
-# Calculate MSE
-mse <- mean(residuals^2)
-
-# Calculate RMSE
-rmse <- sqrt(mse)
-
-# Print the results
-cat("MAE:", mae, "\n")
-cat("MSE:", mse, "\n")
-cat("RMSE:", rmse, "\n")
-
-b_2020 <- c("2020/2", benchmark_2020$aic, benchmark_2020$aicc, benchmark_2020$bic, mae_2020, mse_2020, rmse_2020)
-b_2022 <- c("2022/2",benchmark_2022$aic, benchmark_2022$aicc, benchmark_2022$bic, mae_2022, mse_2022, rmse_2022)
-b_2023 <- c("2023/2",benchmark_2023$aic, benchmark_2023$aicc, benchmark_2023$bic, mae_2023, mse_2023, rmse_2023)
-
-
-three_key_benchmarks <- matrix(c(b_2020, b_2022, b_2023), nrow = 3, ncol = length(b_2020), byrow = TRUE)
-colnames(three_key_benchmarks) <- c("row_names","bb_AIC", "bb_AICc", "bb_BIC", "bb_mae", "bb_mse", "bb_rmse")
-row.names(three_key_benchmarks) <- c("2020/2", "2022/2", "2023/2")
-three_key_benchmarks <- as.data.frame(three_key_benchmarks)
-
-three_key_benchmarks
-
-
-tabulka_arima_modelu <- merge(tabulka_arima_modelu, three_key_benchmarks, by = "row_names")
-}
+tabulka_arima_modelu <- merge(tabulka_arima_modelu, pomocna_tabulka, by = c("row_names", "posun", "AR", "I", "MA"))
 
 
 
-tabulka_arima_modelu <- subset(tabulka_arima_modelu, select = c("row_names", "promenna", "coef", "p-value", "posun", "AR", "I", "MA", 
-                                                                "AIC", "AICc", "BIC", "b_AIC","b_AICc","b_BIC", "bb_AIC", "bb_AICc", "bb_BIC",
-                                                                "mae", "mse", "rmse", "b_mae", "b_mse", "b_rmse", "bb_mae", "bb_mse", "bb_rmse",
-                                                                "sc", "sc_b"))
+
+
+
+tabulka_arima_modelu$sc <-  tabulka_arima_modelu$AIC + tabulka_arima_modelu$AICc + tabulka_arima_modelu$BIC
+tabulka_arima_modelu$sc_b <- tabulka_arima_modelu$b_AIC + tabulka_arima_modelu$b_AICc + tabulka_arima_modelu$b_BIC
+tabulka_arima_modelu$vyslednice <- tabulka_arima_modelu$sc - tabulka_arima_modelu$sc_b
+
+tabulka_arima_modelu$model_bez_bic <-  tabulka_arima_modelu$AIC + tabulka_arima_modelu$AICc
+tabulka_arima_modelu$benchmark_bez_bic <- tabulka_arima_modelu$b_AIC + tabulka_arima_modelu$b_AICc
+tabulka_arima_modelu$vyslednice_bez_bic <- tabulka_arima_modelu$model_bez_bic - tabulka_arima_modelu$benchmark_bez_bic
+
+
+
+poradi <- c("row_names", "promenna", "coef", "p-value", "posun", "AR", "I", "MA", 
+            "AIC", "AICc", "BIC", "b_AIC","b_AICc","b_BIC", "pom_AIC", "pom_AICc", "pom_BIC", #"bb_AIC", "bb_AICc", "bb_BIC",
+            "mae", "mse", "rmse", "b_mae", "b_mse", "b_rmse", "pom_mae", "pom_mse", "pom_rmse",
+            "sc", "sc_b")
+
+tabulka_arima_modelu <- subset(tabulka_arima_modelu, select = poradi)
 
 
 
@@ -735,17 +665,23 @@ tabulka_arima_modelu <- tabulka_arima_modelu %>%
   mutate_at(vars(-row_names, -promenna), as.numeric)
 
 tabulka_arima_modelu <- tabulka_arima_modelu %>%
-  mutate(sc_bb = bb_AIC + bb_AICc + bb_BIC) %>%
+  mutate(sc_pom = pom_AIC + pom_AICc + pom_BIC) %>%
   mutate(msc_b = sc-sc_b) %>%
-  mutate(msc_bb = sc - sc_bb) %>%
+  mutate(msc_pom = sc - sc_pom) %>%
   mutate(am_mae_b = mae - b_mae) %>%
   mutate(am_mse_b = mse - b_mse) %>%
   mutate(am_rmse_b = rmse - b_rmse) %>%
-  mutate(am_mae_bb = mae - bb_mae) %>%
-  mutate(am_mse_bb = mse - bb_mse) %>%
-  mutate(am_rmse_bb = rmse - bb_rmse)
+  mutate(am_mae_pom = mae - pom_mae) %>%
+  mutate(am_mse_pom = mse - pom_mse) %>%
+  mutate(am_rmse_pom = rmse - pom_rmse)
+
 
 View(tabulka_arima_modelu)
+
+
+
+
+
 
 result <- tabulka_arima_modelu %>%
   group_by(row_names, promenna, posun) %>%
@@ -2048,7 +1984,105 @@ if (i == 1){
 }
 
 
-
+{
+  ######################################################################################################
+  # three key benchmark models motherfucker!
+  
+  cifra <- 9
+  
+  # 2004 - 2020
+  
+  
+  uga <- ts(ts_real_inf[1:(length(ts_real_inf) - 36)], start = start, frequency = 12)
+  
+  benchmark_2020 <- forecast::Arima(uga, order = c(1,0,0))
+  forecast::auto.arima(uga)
+  
+  
+  residuals_2020 <- uga - fitted(benchmark_2020)
+  
+  mae_2020 <- mean(abs(residuals_2020))
+  mae_2020 <- round(mae_2020, digits = cifra)
+  
+  mse_2020 <- mean(residuals_2020^2)
+  mse_2020 <- round(mse_2020, digits = cifra)
+  
+  rmse_2020 <- sqrt(mse_2020)
+  rmse_2020 <- round(rmse_2020, digits = cifra)
+  
+  # 2004 - 2022
+  
+  buga <- ts(ts_real_inf[1:(length(ts_real_inf) - 12)], start = start, frequency = 12)
+  
+  benchmark_2022 <- forecast::Arima(buga, order = c(1,0,1))
+  forecast::auto.arima(buga)
+  
+  residuals_2022 <- buga - fitted(benchmark_2022)
+  
+  mae_2022 <- mean(abs(residuals_2022))
+  mae_2022 <- round(mae_2022, digits = cifra)
+  
+  mse_2022 <- mean(residuals_2022^2)
+  mse_2022 <- round(mse_2022, digits = cifra)
+  
+  rmse_2022 <- sqrt(mse_2022)
+  rmse_2022 <- round(rmse_2022, digits = cifra)
+  
+  # 2004 - 2023
+  
+  benchmark_2023 <- forecast::Arima(ts_real_inf, order = c(1,1,3))
+  benchmark_2023
+  
+  
+  residuals_2023 <- ts_real_inf - fitted(benchmark_2023)
+  
+  mae_2023 <- mean(abs(residuals_2023))
+  mae_2023 <- round(mae_2023, digits = cifra)
+  
+  mse_2023 <- mean(residuals_2023^2)
+  mse_2023 <- round(mse_2023, digits = cifra)
+  
+  rmse_2023 <- sqrt(mse_2023)
+  rmse_2023 <- round(rmse_2023, digits = cifra)
+  
+  og <- forecast::auto.arima(ts_real_inf)
+  og
+  
+  # Extract fitted values
+  fitted_values <- fitted(og)
+  
+  # Calculate residuals
+  residuals <- ts_real_inf - fitted_values
+  
+  # Calculate MAE
+  mae <- mean(abs(residuals))
+  
+  # Calculate MSE
+  mse <- mean(residuals^2)
+  
+  # Calculate RMSE
+  rmse <- sqrt(mse)
+  
+  # Print the results
+  cat("MAE:", mae, "\n")
+  cat("MSE:", mse, "\n")
+  cat("RMSE:", rmse, "\n")
+  
+  b_2020 <- c("2020/2", benchmark_2020$aic, benchmark_2020$aicc, benchmark_2020$bic, mae_2020, mse_2020, rmse_2020)
+  b_2022 <- c("2022/2",benchmark_2022$aic, benchmark_2022$aicc, benchmark_2022$bic, mae_2022, mse_2022, rmse_2022)
+  b_2023 <- c("2023/2",benchmark_2023$aic, benchmark_2023$aicc, benchmark_2023$bic, mae_2023, mse_2023, rmse_2023)
+  
+  
+  three_key_benchmarks <- matrix(c(b_2020, b_2022, b_2023), nrow = 3, ncol = length(b_2020), byrow = TRUE)
+  colnames(three_key_benchmarks) <- c("row_names","bb_AIC", "bb_AICc", "bb_BIC", "bb_mae", "bb_mse", "bb_rmse")
+  row.names(three_key_benchmarks) <- c("2020/2", "2022/2", "2023/2")
+  three_key_benchmarks <- as.data.frame(three_key_benchmarks)
+  
+  three_key_benchmarks
+  
+  
+  tabulka_arima_modelu <- merge(tabulka_arima_modelu, three_key_benchmarks, by = "row_names")
+}
 
 
 
