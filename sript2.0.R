@@ -331,7 +331,7 @@ if (new_data == 0){
     for (posun in 0:max_posun) {
       
       chujobober <- ts_real_inf[(posun+1):length(ts_real_inf)]
-      modelos <- forecast::auto.arima(chujobober, max.p = 3, max.q = 3, ic = "aicc", stepwise = FALSE)
+      modelos <- forecast::auto.arima(chujobober, max.p = 3, max.q = 3, ic = c("bic"), stepwise = FALSE)
       
       residuals <- modelos$residuals
       
@@ -737,12 +737,24 @@ View(a_result)
 # control funguje
 control_result <- tabulka_arima_modelu %>%
   group_by(row_names, promenna, posun) %>%
-  filter(sc == min(sc_b) | sc_b == min(a_sc)) %>%
+  filter(sc_b == min(sc_b) | a_sc == min(a_sc)) %>%
   filter(sc_b < a_sc) %>%
   ungroup()
 
 View(control_result)
 # Print the updated dataframe
+
+# tabulka ke srovnani s auto arimami
+a_result <- tabulka_arima_modelu %>%
+  group_by(row_names, promenna, posun) %>%
+  filter(sc == min(sc) | sc_b == min(a_sc)) %>%
+  filter(sc < a_sc) %>%
+  ungroup() %>%
+  mutate(srovnani = sc - a_sc)
+
+
+
+
 
 #sejv env jako env_arimy
 
@@ -750,104 +762,125 @@ View(control_result)
 
 
 
+# do diplomky
 
-set.seed(420)
-x <- c(NA, sim_data)
-modelicek <- forecast::auto.arima(x)
-modelicek$residuals %>% length
+kolik_modelu_ma_lepsi <- function(dataframe, sloupec_1, sloupec_2){
+  x <- dataframe[,"sloupec_1"] - dataframe[,"sloupec_2"]
+  x <- x < 0 
+  x <- sum(x)
+  return(x)
+}
 
-sim_data %>% length()
 
+#2019
+tabulka_arima_modelu[tabulka_arima_modelu[, "row_names"] == "2020/2",] %>% nrow() #pocet ss modelu
 
+data_2019 <- tabulka_arima_modelu[tabulka_arima_modelu[, "row_names"] == "2020/2",]
 
+x <- data_2019$sc - data_2019$sc_b
+x <- x < 0 
+x <- sum(x)
+print(x)
 
+x <- data_2019$sc - data_2019$a_sc
+x <- x < 0 
+x <- sum(x)
+print(x)
 
+x <- data_2019$rmse - data_2019$b_rmse
+x <- x < 0 
+x <- sum(x)
+print(x)
 
 
+x <- data_2019$mae - data_2019$b_mae
+x <- x < 0 
+x <- sum(x)
+print(x)
 
+x <- data_2019$mae - data_2019$a_mae
+x <- x < 0 
+x <- sum(x)
+print(x)
 
 
+x <- data_2019$rmse - data_2019$a_rmse
+quantile(x, prob = c(0.1,0.5,0.9))
+x <- x < 0 
+x <- sum(x)
+print(x)
 
 
 
+#2022
 
 
+tabulka_arima_modelu[tabulka_arima_modelu[, "row_names"] == "2022/2",] %>% nrow() #pocet ss modelu
 
+data_2019 <- tabulka_arima_modelu[tabulka_arima_modelu[, "row_names"] == "2022/2",]
 
+x <- data_2019$sc - data_2019$sc_b
+x <- x < 0 
+x <- sum(x)
+print(x)
 
+x <- data_2019$sc - data_2019$a_sc
+x <- x < 0 
+x <- sum(x)
+print(x)
 
+x <- data_2019$rmse - data_2019$b_rmse
+x <- x < 0 
+x <- sum(x)
+print(x)
 
 
+x <- data_2019$mae - data_2019$b_mae
+x <- x < 0 
+x <- sum(x)
+print(x)
 
+x <- data_2019$mae - data_2019$a_mae
+x <- x < 0 
+x <- sum(x)
+print(x)
 
 
+x <- data_2019$rmse - data_2019$a_rmse
+quantile(x, prob = c(0.1,0.5,0.9))
+x <- x < 0 
+x <- sum(x)
+print(x)
 
-min_rows <- tabulka_arima_modelu %>%
-  group_by(row_names) %>%
-  filter(model == min(model) | benchmark == min(benchmark))
 
-# Print the resulting dataframe
-print(min_rows)
 
-min_rows_bez_bic <- tabulka_arima_modelu %>%
-  group_by(row_names) %>%
-  filter(model_bez_bic == min(model_bez_bic) | benchmark_bez_bic == min(benchmark_bez_bic))
 
-# Print the resulting dataframe
-print(min_rows_bez_bic)
 
+#######################################################################################################
+# OUT-OF-SAMPLE FORECASTS
 
 
-min_rows_delay <- tabulka_arima_modelu %>% filter(lag == "delay")
-min_rows_delay
+# Set up the window sizes for the rolling and expanding windows
+rolling_window_size <- 90
+expanding_window_size <- nrow(data) - rolling_window_size
 
+# Set up the initial model using the first window of data
+#model <- Arima(data[1:rolling_window_size, "ts_real_inf_3"], order = c(1,1,1), xreg = data[1:rolling_window_size, "ext_regressors"])
 
+# Set up empty vectors to store the forecasts and actuals
+rolling_forecasts <- numeric()
+rolling_actuals <- numeric()
+expanding_forecasts <- numeric()
+expanding_actuals <- numeric()
 
+window_size <- rolling_window_size  # Length of the rolling window
+n_ahead <- 1
 
 
 
 
-nrow(result)
-result <- result %>%
-  mutate_at(vars(-row_names, -promenna, -lag), as.numeric)
 
 
-sum(result[,"vyslednice"]> 0)
-sum((result$rmse-result$b_rmse)>0)
-sum((result$mae-result$b_mae)>0)
-
-
-
-
-
-
-
-
-
-View(three_key_benchmarks)
-View(tabulka_arima_modelu)
-View(min_rows)
-View(min_rows_delay)
-View(result)
-
-
-
-print(xtable(three_key_benchmarks, caption = "Information criteria for three best model",
-             digits = 4, type = "latex"), file = "three_key_benchmarks.tex")
-
-
-
-
-
-
-
-
-
-
-
-
-
-# sejvni env
 
 
 
@@ -2163,6 +2196,79 @@ if (i == 1){
   tabulka_arima_modelu <- merge(tabulka_arima_modelu, three_key_benchmarks, by = "row_names")
 }
 
+
+
+
+
+
+
+
+min_rows <- tabulka_arima_modelu %>%
+  group_by(row_names) %>%
+  filter(model == min(model) | benchmark == min(benchmark))
+
+# Print the resulting dataframe
+print(min_rows)
+
+min_rows_bez_bic <- tabulka_arima_modelu %>%
+  group_by(row_names) %>%
+  filter(model_bez_bic == min(model_bez_bic) | benchmark_bez_bic == min(benchmark_bez_bic))
+
+# Print the resulting dataframe
+print(min_rows_bez_bic)
+
+
+
+min_rows_delay <- tabulka_arima_modelu %>% filter(lag == "delay")
+min_rows_delay
+
+
+
+
+
+
+
+nrow(result)
+result <- result %>%
+  mutate_at(vars(-row_names, -promenna, -lag), as.numeric)
+
+
+sum(result[,"vyslednice"]> 0)
+sum((result$rmse-result$b_rmse)>0)
+sum((result$mae-result$b_mae)>0)
+
+
+
+
+
+
+
+
+
+View(three_key_benchmarks)
+View(tabulka_arima_modelu)
+View(min_rows)
+View(min_rows_delay)
+View(result)
+
+
+
+print(xtable(three_key_benchmarks, caption = "Information criteria for three best model",
+             digits = 4, type = "latex"), file = "three_key_benchmarks.tex")
+
+
+
+
+
+
+
+
+
+
+
+
+
+# sejvni env
 
 
 
