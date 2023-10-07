@@ -857,7 +857,7 @@ print(x)
 
 
 #######################################################################################################
-# OUT-OF-SAMPLE FORECASTS
+# OUT-OF-SAMPLE FORECASTS and SETTINGS
 
 
 # Set up the window sizes for the rolling and expanding windows
@@ -886,26 +886,34 @@ n_ahead <- 1
 
 
 ######################################################################################################
-# Ten jediny funkcni model
+# nastaveni specifikaci konkretniho modelu
+
+posun <- 10
+
+ar <- 0
+dif <- 1
+ma <- 1
 
 end   <- c(2023, 2)
 
-regresor <- ts(data = gt_dss[,"inflace"], start = c(2004, 1), end = end, frequency = 12)
-regresor <- regresor / mean(regresor) * mean(ts_real_inf)
+regresor <- ts(data = gt_dss[,"cena.nafty"], start = c(2004, 1), end = end, frequency = 12)
+regresor <- regresor / mean(regresor) * mean(regresor)
 
-ext_regressor <- regresor
 #future_values <- opposite_lag(ext_regressor, 1)
-posun <- 1
-future_values <- stats::lag(ext_regressor, posun)
-ext_regressors <- ts(future_values[-(1:posun)], start = c(start[1], (start[2] + 1)), frequency = 12)
-arima_model <- try(forecast::Arima(ts_real_inf_3, order = c(1,1,2), xreg = ext_regressors))
+
+
+ext_regressor <- as.vector(regresor)
+ext_regressor <- lag(ext_regressor, posun)
+ext_regressors <- ts(ext_regressor, start = c(start[1], (start[2])), frequency = 12)
+
+arima_model <- try(forecast::Arima(ts_real_inf, order = c(ar,dif,ma), xreg = ext_regressors))
 #arima_model <- try(forecast::Arima(ts_real_inf_3, order = c(1,1,2)))
 
 arima_model$fitted
 
 
 # Combine the data into a single data frame
-data <- data.frame(ts_real_inf_3, ext_regressors)
+data <- data.frame(ts_real_inf, ext_regressors)
 
 uga <-  c("iterace", "ext", "rw", "mae", "mse", "rmse")
 
@@ -942,7 +950,7 @@ library(forecast)
 
 
 start_date <- start(ts_real_inf_3)
-end_date <- end(ts_real_inf_3)
+end_date <- end(ts_real_inf)
 n_iterations <- length(ts_real_inf_3) - window_size - n_ahead + 1
 
 
@@ -956,7 +964,7 @@ for (i in 1:n_iterations) {
   ext_regressors_window <- window(ext_regressors, start = start_window, end = end_window)
   
   tryCatch({
-    model <- Arima(ts_window, order = c(1, 1, 2), xreg = ext_regressors_window)
+    model <- Arima(ts_window, order = c(ar, dif, ma), xreg = ext_regressors_window)
     
     start_forecast <- end_window + c(0, 1)
     end_forecast <- start_forecast + c(0, n_ahead - 1)
@@ -976,8 +984,6 @@ point_estimates_rw <- do.call(c, lapply(forecasts_rw, function(x) x$mean))
 
 # bodiky
 {
-
-
 
 # Print the point estimates
 debug_print(point_estimates_rw)
@@ -1026,7 +1032,7 @@ for (i in 1:n_iterations) {
   ext_regressors_window <- window(ext_regressors, start = start_window, end = end_window)
   
   tryCatch({
-    model <- Arima(ts_window, order = c(1, 1, 2))
+    model <- Arima(ts_window, order = c(ar, dif, ma))
     
     start_forecast <- end_window + c(0, 1)
     end_forecast <- start_forecast + c(0, n_ahead - 1)
@@ -1304,7 +1310,7 @@ for (predpoved in unique(tabulka_nej_model$rw)) {
   print(testy[indices,"iterace"])
 
   print("jak casto nizsi?")
-  print(sum(soucet_m < soucet_b))
+  print(sum(soucet_m < soucet_b)/length(soucet_b))
   
   print("parove modely")
   
