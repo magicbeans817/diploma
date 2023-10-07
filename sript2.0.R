@@ -890,9 +890,34 @@ n_ahead <- 1
 
 posun <- 10
 
+
+  
+moudrobober <- as.vector(ts_real_inf)
+moudrobober <- lag(moudrobober, posun)
+moudrobober <- ts(moudrobober, start = c(start[1], (start[2])), frequency = 12)
+
+modelos <- forecast::auto.arima(moudrobober, max.p = 3, max.q = 3, ic = c("bic"), stepwise = FALSE)
+modelos
+  
+modelos$arma
+
+
 ar <- 0
 dif <- 1
 ma <- 1
+
+bench <- FALSE
+
+if(bench == TRUE){
+  ar_bez <- ar
+  dif_bez <- dif
+  ma_bez <- ma
+} else {
+  ar_bez <- modelos$arma[1]
+  dif_bez <- modelos$arma[6]
+  ma_bez <- modelos$arma[2]
+}
+
 
 end   <- c(2023, 2)
 
@@ -1032,7 +1057,7 @@ for (i in 1:n_iterations) {
   ext_regressors_window <- window(ext_regressors, start = start_window, end = end_window)
   
   tryCatch({
-    model <- Arima(ts_window, order = c(ar, dif, ma))
+    model <- Arima(ts_window, order = c(ar_bez, dif_bez, ma_bez))
     
     start_forecast <- end_window + c(0, 1)
     end_forecast <- start_forecast + c(0, n_ahead - 1)
@@ -1094,7 +1119,7 @@ forecasts <- ts(numeric(n - start_forecast + 1), start = start(ts_real_inf)[1] +
 
 for (t in start_forecast:n) {
   # Fit the ARIMA model with the external regressor on the expanding window
-  model <- Arima(ts_real_inf_3[1:(t - 1)], order = c(1, 1, 2), xreg = ext_regressors[1:(t - 1)])
+  model <- Arima(ts_real_inf[1:(t - 1)], order = c(ar, dif, ma), xreg = ext_regressors[1:(t - 1)])
   
   # One-step ahead forecast
   forecast <- predict(model, n.ahead = 1, newxreg = ext_regressors[t])
@@ -1140,7 +1165,7 @@ tabulka_nej_model <- rbind(tabulka_nej_model, c(bubu,"ext", "ew", mae, mse, rmse
 
 for (t in start_forecast:n) {
   # Fit the ARIMA model with the external regressor on the expanding window
-  model <- Arima(ts_real_inf[1:(t - 1)], order = c(1, 1, 2))
+  model <- Arima(ts_real_inf[1:(t - 1)], order = c(ar_bez, dif_bez, ma_bez))
   
   # One-step ahead forecast
   forecast <- predict(model, n.ahead = 1)
@@ -1227,7 +1252,7 @@ for (model in unique(tabulka_nej_model$ext)) {
       }
       
       
-      matplot(data_graf$iterace, data_graf[, meritka], type = "l", ylim = c(0.3,0.9), 
+      matplot(data_graf$iterace, data_graf[, meritka], type = "l", ylim = c(0.0,0.9), 
               xlab = "(Starting) Window length", ylab = "Value", main = c(paste(nazev_grafu_rw, " - ", nazev_grafu_ext)))
       
 
