@@ -949,7 +949,7 @@ library(forecast)
 # Assuming ts_real_inf_3 and ext_regressors are time series objects with the same frequency and date range
 
 
-start_date <- start(ts_real_inf_3)
+start_date <- start(ts_real_inf)
 end_date <- end(ts_real_inf)
 n_iterations <- length(ts_real_inf) - window_size - n_ahead
 
@@ -960,7 +960,7 @@ for (i in 1:n_iterations) {
   debug_print(i/n_iterations)
   start_window <- start_date + (i - 1) * c(0, 1)
   end_window <- start_window + c(0, window_size - 1)
-  ts_window <- window(ts_real_inf_3, start = start_window, end = end_window)
+  ts_window <- window(ts_real_inf, start = start_window, end = end_window)
   ext_regressors_window <- window(ext_regressors, start = start_window, end = end_window)
   
   tryCatch({
@@ -993,7 +993,7 @@ debug_print(point_estimates_rw)
 prec <- c(window_size )
 start_forecast_all <- start_date + c(0 , window_size)
 end_forecast_all <- end_date
-ts_forecast <- ts(point_estimates_rw, start = start_forecast_all, end = end_forecast_all, frequency = frequency(ts_real_inf_3))
+ts_forecast <- ts(point_estimates_rw, start = start_forecast_all, end = end_forecast_all, frequency = frequency(ts_real_inf))
 
 # Plot the actual and forecasted values together
 #ts.plot(ts_real_inf_3, ts_forecast, col = c("black", "red"), lty = c(1, 1), main = "Actual vs. Forecasted Values", xlab = "Time", ylab = "Value")
@@ -1001,7 +1001,7 @@ ts_forecast <- ts(point_estimates_rw, start = start_forecast_all, end = end_fore
 
 
 # Extract the actual values for which we have forecasts
-actual_values <- window(ts_real_inf_3, start = start_forecast_all, end = end_forecast_all)
+actual_values <- window(ts_real_inf, start = start_forecast_all, end = end_forecast_all)
 
 # Calculate quality measures
 mae <- mean(abs(actual_values - point_estimates_rw))
@@ -1017,7 +1017,7 @@ cat("Root Mean Squared Error (RMSE):", rmse, "\n")
 
 tabulka_nej_model <- rbind(tabulka_nej_model, c(bubu,"ext", "rw", mae, mse, rmse))
 
-start_date <- start(ts_real_inf_3)
+start_date <- start(ts_real_inf)
 end_date <- end(ts_real_inf)
 n_iterations <- length(ts_real_inf) - window_size - n_ahead
 
@@ -1028,7 +1028,7 @@ for (i in 1:n_iterations) {
   debug_print(i/n_iterations)
   start_window <- start_date + (i - 1) * c(0, 1)
   end_window <- start_window + c(0, window_size - 1)
-  ts_window <- window(ts_real_inf_3, start = start_window, end = end_window)
+  ts_window <- window(ts_real_inf, start = start_window, end = end_window)
   ext_regressors_window <- window(ext_regressors, start = start_window, end = end_window)
   
   tryCatch({
@@ -1063,7 +1063,7 @@ point_estimates_rw_bez <- do.call(c, lapply(forecasts_rw_bez, function(x) x$mean
   prec <- c(window_size )
   start_forecast_all <- start_date + c(0 , window_size)
   end_forecast_all <- end_date
-  ts_forecast <- ts(point_estimates_rw_bez, start = start_forecast_all, end = end_forecast_all, frequency = frequency(ts_real_inf_3))
+  ts_forecast <- ts(point_estimates_rw_bez, start = start_forecast_all, end = end_forecast_all, frequency = frequency(ts_real_inf))
   
   # Plot the actual and forecasted values together
   #ts.plot(ts_real_inf_3, ts_forecast, col = c("black", "red"), lty = c(1, 1), main = "Actual vs. Forecasted Values", xlab = "Time", ylab = "Value")
@@ -1071,7 +1071,7 @@ point_estimates_rw_bez <- do.call(c, lapply(forecasts_rw_bez, function(x) x$mean
   
   
   # Extract the actual values for which we have forecasts
-  actual_values <- window(ts_real_inf_3, start = start_forecast_all, end = end_forecast_all)
+  actual_values <- window(ts_real_inf, start = start_forecast_all, end = end_forecast_all)
   
   # Calculate quality measures
   mae <- mean(abs(actual_values - point_estimates_rw_bez))
@@ -1088,9 +1088,9 @@ tabulka_nej_model <- rbind(tabulka_nej_model, c(bubu,"bez", "rw", mae, mse, rmse
 
 
 # Expanding window forecast
-n <- length(ts_real_inf_3)
+n <- length(ts_real_inf)
 start_forecast <- rolling_window_size
-forecasts <- ts(numeric(n - start_forecast + 1), start = start(ts_real_inf_3)[1] + (start_forecast - 1) / frequency(ts_real_inf_3), frequency = frequency(ts_real_inf_3))
+forecasts <- ts(numeric(n - start_forecast + 1), start = start(ts_real_inf)[1] + (start_forecast - 1) / frequency(ts_real_inf), frequency = frequency(ts_real_inf))
 
 for (t in start_forecast:n) {
   # Fit the ARIMA model with the external regressor on the expanding window
@@ -1112,7 +1112,7 @@ lines(forecasts, col = "blue")
 
 
 # Calculate the errors
-errors <- forecasts - ts_real_inf_3[start_forecast:n]
+errors <- forecasts - ts_real_inf[start_forecast:n]
 
 # Calculate MAE
 mae <- mean(abs(errors))
@@ -1140,7 +1140,7 @@ tabulka_nej_model <- rbind(tabulka_nej_model, c(bubu,"ext", "ew", mae, mse, rmse
 
 for (t in start_forecast:n) {
   # Fit the ARIMA model with the external regressor on the expanding window
-  model <- Arima(ts_real_inf_3[1:(t - 1)], order = c(1, 1, 2))
+  model <- Arima(ts_real_inf[1:(t - 1)], order = c(1, 1, 2))
   
   # One-step ahead forecast
   forecast <- predict(model, n.ahead = 1)
@@ -1158,7 +1158,7 @@ for (t in start_forecast:n) {
   
   
   # Calculate the errors
-  errors <- forecasts - ts_real_inf_3[start_forecast:n]
+  errors <- forecasts - ts_real_inf[start_forecast:n]
   
   # Calculate MAE
   mae <- mean(abs(errors))
@@ -1266,7 +1266,7 @@ for (predpoved in unique(tabulka_nej_model$rw)) {
     osa_x <- "Starting window length"
   }
   
-  matplot(data_graf$iterace, data_graf[, meritka], type = "l", lty = line_types, ylim = c(0.3,0.9), 
+  matplot(data_graf$iterace, data_graf[, meritka], type = "l", lty = line_types, ylim = c(0.0,0.9), 
           xlab = osa_x, ylab = "Value", col = colores, main = nazev_grafu_rw)
   
   # Add a legend
@@ -1309,7 +1309,7 @@ for (predpoved in unique(tabulka_nej_model$rw)) {
   print("3 nejlepsi settingy okna")
   print(testy[indices,"iterace"])
 
-  print("jak casto nizsi?")
+  print("jak casto nizsi? (%)")
   print(sum(soucet_m < soucet_b)/length(soucet_b))
   
   print("parove modely")
