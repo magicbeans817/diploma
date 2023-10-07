@@ -951,7 +951,7 @@ library(forecast)
 
 start_date <- start(ts_real_inf_3)
 end_date <- end(ts_real_inf)
-n_iterations <- length(ts_real_inf_3) - window_size - n_ahead + 1
+n_iterations <- length(ts_real_inf) - window_size - n_ahead
 
 
 forecasts_rw <- list()
@@ -1018,8 +1018,8 @@ cat("Root Mean Squared Error (RMSE):", rmse, "\n")
 tabulka_nej_model <- rbind(tabulka_nej_model, c(bubu,"ext", "rw", mae, mse, rmse))
 
 start_date <- start(ts_real_inf_3)
-end_date <- end(ts_real_inf_3)
-n_iterations <- length(ts_real_inf_3) - window_size - n_ahead + 1
+end_date <- end(ts_real_inf)
+n_iterations <- length(ts_real_inf) - window_size - n_ahead
 
 
 forecasts_rw_bez <- list()
