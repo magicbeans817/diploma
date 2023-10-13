@@ -17,6 +17,7 @@ library(ggplot2)
 library(tidyr)
 library(tidyverse)
 
+
 new_data <- 0
 
 if (new_data == 0){
@@ -24,7 +25,7 @@ if (new_data == 0){
   new_data <- 0
 }
 
-
+max_posun <- 12
 
 DEBUG <- FALSE
 
@@ -75,6 +76,12 @@ plot(inf_cpm)
 gt <- read.csv("search_trends.csv", row.names = 1)
 gt %>% head
 gt%>% dim
+gt <- gt[ , !(names(gt) %in% c("cena.bydleni", "nakup.zlata"))]
+
+
+gt_up <- read.csv("search_trends_up.csv", row.names = 1)
+gt <- cbind(gt, gt_up[,14:ncol(gt_up)])
+
 
 rownm <- as.Date(rownames(gt), format = "%Y-%d-%m")
 rownm <- format(rownm, "%Y-%m-%d")
@@ -82,12 +89,13 @@ start <- rownames(gt)[1]
 rok   <- as.numeric(substr(start, 1, 4))
 mesic <- as.numeric(substr(start, 6, 7))
 start <- c(rok, mesic)
-debug_print(start)
 
 
 
 
-jmena_sloupecku <- c("promenna", "p-value", "AIC","AICc","BIC", "AR", "I", "MA", "coef","lag", "sAIC", "sAICc","sBIC")
+
+jmena_sloupecku <- c("promenna", "p-value","posun", "AIC","AICc","BIC", "AR", "I", "MA", "coef","lag", "b_AIC", "b_AICc","b_BIC", 
+                     "mae", "mse", "rmse", "b_mae", "b_mse", "b_rmse")
 pocet_sloupecku <- length(jmena_sloupecku)
 
 
@@ -95,7 +103,7 @@ pocet_sloupecku <- length(jmena_sloupecku)
 tabulka_arima_modelu <- data.frame(matrix(ncol = pocet_sloupecku, nrow = 0))
 colnames(tabulka_arima_modelu) <- jmena_sloupecku
 
-my_matrix <- matrix(c(2019, 2, 2022, 2, 2023, 2), nrow = 3, ncol = 2, byrow = TRUE)
+my_matrix <- matrix(c(2020, 2, 2022, 2, 2023, 2), nrow = 3, ncol = 2, byrow = TRUE)
 my_matrix_n <- nrow(my_matrix)
 
 # Create an empty list to store the row vectors
@@ -104,6 +112,23 @@ row_vectors <- vector("list", length = my_matrix_n)
 originalni_modely <- matrix(c(1:6), nrow = 1)
 colnames(originalni_modely) <- c("dAR","dI","dMA","dAIC","dAICc","dBIC") 
 
+testy <- data.frame(time_interval = character(),
+                    column_name = character(),
+                    adf_p_value = numeric(),
+                    ljung_box_p_value = numeric(),
+                    stringsAsFactors = FALSE)
+
+granger <- data.frame(time_interval = character(),
+                      column_name = character(), 
+                      n_lags = numeric(), 
+                      granger_p_value = numeric())
+
+
+bum <- 0
+cifra <- 9
+
+jmena_sloupecku_auto_arimy <- c("row_names" , "posun",   "a_AIC", "a_AICc", "a_BIC", "a_mae", "a_mse", "a_rmse")
+tabulka_auto_arimy <- data.frame(matrix(ncol = length(jmena_sloupecku_auto_arimy), nrow = 0))
 
 
 
@@ -119,8 +144,18 @@ if (new_data == 0){
     #end   <- c(2022, 2)
     
     
+    if(rocnik == 1){
+      gt_f <- gt[1:(nrow(gt)-36),]
+    }else if(rocnik == 2){
+      gt_f <- gt[1:(nrow(gt)-12),]
+    }else if(rocnik == 3){
+      gt_f <- gt
+    }
+    
+    debug_print("tvoje mama")
+    
     # Convert all columns to numeric
-    gt_numeric <- data.frame(lapply(gt, as.numeric))
+    gt_numeric <- data.frame(lapply(gt_f, as.numeric))
     
     # Remove seasonality from the data
     gt_deseasonalized <- data.frame(lapply(gt_numeric, function(x) {
@@ -129,10 +164,24 @@ if (new_data == 0){
       return(deseasonalized)
     }))
     
-    # Print the deseasonalized data
-    row.names(gt_deseasonalized) <- rownm
-    debug_print(gt_deseasonalized)
+    debug_print("moje mama")
     
+    # Print the deseasonalized data
+    
+    debug_print("markova mama")
+    
+    
+    
+    if(rocnik == 1){
+      row.names(gt_deseasonalized) <- rownm[1:(length(rownm)-36)]
+    }else if(rocnik == 2){
+      row.names(gt_deseasonalized) <- rownm[1:(length(rownm)-12)]
+    }else if(rocnik == 3){
+      row.names(gt_deseasonalized) <- rownm
+    }
+    
+    
+    debug_print(gt_deseasonalized)
     for (i in 1:ncol(gt_deseasonalized)) {
       plot(gt_deseasonalized[,i], ylab = colnames(gt_deseasonalized)[i])
       tseries::adf.test(gt_deseasonalized[,i])
@@ -166,20 +215,26 @@ if (new_data == 0){
     
     
     ######################################################################################################
-    # Subsetting, Granger, adjustment of GT
+    # Subsetting, tests and adjustment of GT
     
     s_inf_cpm_s <- window(ts_deseasonalized, frequency = 12, start = c(rok, mesic), end = end)
     
+ 
+    
     for (i in 1:ncol(gt_dss)) {
-      x <- ts(gt_dss[, i], start = start, frequency = 12)
-      for (j in 1:3) {
-        y<- lmtest::grangertest(s_inf_cpm_s, x, order = j)
-        debug_print(y)
-        debug_print(colnames(gt_dss)[i])
-      }
+      
+      # ADF Test
+      adf_test <- adf.test(gt_dss[,i])
+      
+      # Ljung-Box Test
+      lb_test <- Box.test(gt_dss[,i], lag = 12, type = "Ljung-Box")
+      
+      # Append results to testy dataframe
+      testy <- rbind(testy, data.frame(time_interval = rocnik,
+                                       column_name = as.character(colnames(gt_dss)[i]), 
+                                       adf_p_value = adf_test$p.value, 
+                                       ljung_box_p_value = lb_test$p.value))
     }
-    
-    
     ######################################################################################################
     # PCA
     
@@ -206,6 +261,28 @@ if (new_data == 0){
     gt_dss <- cbind(gt_dss, pca$x[,c(1:index)])
     
     
+    # granger
+    
+    for (i in 1:ncol(gt_dss)) {
+      x <- ts(gt_dss[, i], start = start, frequency = 12)
+      for (j in 1:12) {
+
+        
+        y <- lmtest::grangertest(s_inf_cpm_s, x, order = j)
+        debug_print(y)
+        debug_print(colnames(gt_dss)[i])
+
+        
+
+        granger <- rbind(granger, data.frame(time_interval = rocnik,
+                                             column_name = as.character(colnames(gt_dss)[i]), 
+                                             n_lags = j, 
+                                             granger_p_value = y$`Pr(>F)`))
+
+      }
+    }
+
+    
     ######################################################################################################
     # Arima
     
@@ -221,7 +298,8 @@ if (new_data == 0){
     # Srovnani s arimou bez external regresoru
     
     arima_model <- forecast::Arima(ts_real_inf, order = c(ar,d,ma))
-    ssm <- matrix(c("originalni model", NA, arima_model$aic, arima_model$aicc, arima_model$bic, ar, d, ma, 0, "lag", "Vojta", "je", "debil"), nrow = 1, ncol = length(jmena_sloupecku))
+    ssm <- matrix(c("originalni model", NA, arima_model$aic, arima_model$aicc, arima_model$bic, ar, d, ma, 0, "Vojta", "je", "debil",
+                    "mae", "mse", "rmse", "b_mae", "b_mse", "b_rmse"), nrow = 1, ncol = length(jmena_sloupecku))
     colnames(ssm) <- jmena_sloupecku
     
     pocet_ss <- 0
@@ -241,56 +319,52 @@ if (new_data == 0){
     
     
     
+    # Plot ACF
+    acf(ts_real_inf, main = paste("ACF - Inflation, (2004 -", end[1],")"))
+    
+    # Plot PACF
+    pacf(ts_real_inf, main = paste("PACF - Inflation, (2004 -", end[1],")"))
+    
     cifry <- 9
+
     
+    for (posun in 0:max_posun) {
+      
+      chujobober <- ts_real_inf[(posun+1):length(ts_real_inf)]
+      modelos <- forecast::auto.arima(chujobober, max.p = 3, max.q = 3, ic = c("bic"), stepwise = FALSE)
+      
+      residuals <- modelos$residuals
+      
+      vektor_aa <- c(gsub(" ", "", paste(as.character(end[1]),"/",as.character(end[2])), " ","") , posun, modelos$aic, modelos$aicc, modelos$bic,
+                     round(mean(abs(residuals)), cifra), round(mean(residuals^2), cifra), round(sqrt(mean(residuals^2)), cifra))
+      
+      tabulka_auto_arimy <- rbind(tabulka_auto_arimy, vektor_aa)
+    }
     
+    if(rocnik == 3){
+      colnames(tabulka_auto_arimy) <- jmena_sloupecku_auto_arimy
+    }
     ######################################################################################################
-    for (ar in 1:3) {
+    for (i in 1:ncol(gt_dss)) {
+      print(colnames(gt_dss)[i])
       for (d in 0:1) {
         for (ma in 1:3) {
-          for (i in 1:ncol(gt_dss)) {
+          for (ar in 0:3) {
+          
             
             debug_print(i)
             
             regresor <- ts(data = gt_dss[,i], start = c(2004, 1), end = end, frequency = 12)
-            regresor <- regresor / mean(regresor) * mean(ts_real_inf)
+            regresor <- regresor / regresor[1] * ts_real_inf[1]
             #print(regresor)
-            
-            for (promenna in c("regresor","delay", "posun_vpred")) {
               
-              rozeznani_do_tabulky <- promenna
-              
-              if (promenna == "regresor") {
+            for (posun in 0:max_posun) {
                 
-                arima_model <- try(forecast::Arima(ts_real_inf, order = c(ar,d,ma), xreg = regresor))
-                
-                
-              } else if(promenna == "delay"){
-                
-                ext_regressor <- regresor
-                #future_values <- opposite_lag(ext_regressor, 1)
-                posun <- 1
-                future_values <- stats::lag(ext_regressor, posun)
-                ext_regressors <- ts(future_values[-(1:posun)], start = c(start[1], (start[2])), frequency = 12)
-                #ext_regressors <- ts(regresor, start = c(start[1], (start[2]+1)))
-                arima_model <- try(forecast::Arima(ts_real_inf_3, order = c(ar,d,ma), xreg = ext_regressors))
-                #print(ext_regressors)
-                #print(ts_real_inf_3)
-                #print("Konec")
-                
-              } else if(promenna == "posun_vpred") {
-                
-                
-                ext_regressor <- regresor
-                posun <- 1
-                future_values <- opposite_lag(ext_regressor, posun)
-                
-                
-                # Remove the last row, as it contains NA for future_values
-                ext_regressors <- ts(future_values[-length(future_values)], start = start, frequency = 12) #ext_regressors[-nrow(ext_regressors), ]
-                
-                arima_model <- try(forecast::Arima(ts_real_inf_2, order = c(ar,d,ma), xreg = ext_regressors))
-              }
+                  ext_regressor <- as.vector(regresor)
+                  ext_regressor <- lag(ext_regressor, posun)
+                  ext_regressor <- ts(ext_regressor, start = c(start[1], (start[2])), frequency = 12)
+
+                  arima_model <- try(forecast::Arima(ts_real_inf, order = c(ar,d,ma), xreg = ext_regressor))
               
               
               # Pro pripad multiple regression
@@ -306,7 +380,7 @@ if (new_data == 0){
                 # Store the ARIMA model in the list if no error occurred
               } else {
                 # Print a message and continue to the next iteration if an error occurred
-                cat("Error encountered for ARIMA(", i) # . Skipping this model.\n")
+                cat("Error encountered for ARIMA(", colnames(gt_dss)[i]) # . Skipping this model.\n")
                 next  # Continue to the next iteration
               }
               
@@ -342,30 +416,60 @@ if (new_data == 0){
                 moje_bic <- round(arima_model$bic, digits = cifry)
                 
                 
-                if (rozeznani_do_tabulky == "regresor") {
+                # mae, mse, rmse
+                
+                fitted_values <- fitted(arima_model)   
                   
-                  srovnavaci_model <- try(forecast::Arima(ts_real_inf, order = c(ar,d,ma)))
+                  residuals <- ts_real_inf - fitted_values
+                
+                residuals <- na.omit(residuals)
+                
+                # Mean Absolute Error (MAE)
+                mae <- mean(abs(residuals))
+                mae <- round(mae, digits = cifry)
+                
+                # Mean Squared Error (MSE)
+                mse <- mean(residuals^2)
+                mse <- round(mse, digits = cifry)
+                
+                # Root Mean Squared Error (RMSE)
+                rmse <- sqrt(mse)
+                rmse <- round(rmse, digits = cifry)
+                
+                
+                  #novy_regresor <- as.vector(ts_real_inf)
+                  #novy_regresor <- lag(novy_regresor, posun)
+                  #novy_regresor <- ts(novy_regresor, start = c(start[1], (start[2])), frequency = 12)
+                
+                  novy_regresor <- ts_real_inf[(posun+1):length(ts_real_inf)]
+                
+                  srovnavaci_model <- try(forecast::Arima(novy_regresor, order = c(ar,d,ma)))
                   srovnavaci_vektor <- c(as.character(ar), as.character(d), as.character(ma), srovnavaci_model$aic, srovnavaci_model$aicc, srovnavaci_model$bic)
                   originalni_modely <- rbind(originalni_modely,srovnavaci_vektor)
-                  
-                } else if (rozeznani_do_tabulky == "delay") {
-                  
-                  srovnavaci_model <- try(forecast::Arima(ts_real_inf_3, order = c(ar,d,ma)))
-                  srovnavaci_vektor <- c(as.character(ar), as.character(d), as.character(ma), srovnavaci_model$aic, srovnavaci_model$aicc, srovnavaci_model$bic)
-                  originalni_modely <- rbind(originalni_modely, srovnavaci_vektor)
-                  
-                  
-                } else if (rozeznani_do_tabulky == "posun_vpred") {
-                  
-                  srovnavaci_model <- try(forecast::Arima(ts_real_inf_2, order = c(ar,d,ma)))
-                  srovnavaci_vektor <- c(as.character(ar), as.character(d), as.character(ma), srovnavaci_model$aic, srovnavaci_model$aicc, srovnavaci_model$bic)
-                  originalni_modely <- rbind(originalni_modely, srovnavaci_vektor)
-                  
-                }
                 
                 
-                informace <- c(as.character(colnames(gt_dss)[i]), p_value, moje_aic, moje_aicc, moje_bic, ar, d, ma, co,rozeznani_do_tabulky, 
-                               srovnavaci_model$aic, srovnavaci_model$aicc, srovnavaci_model$bic)
+                # benchmark mae, mse, rmse
+                
+                fitted_values <- fitted(srovnavaci_model)
+                  
+                residuals <- na.omit(novy_regresor - fitted_values)
+                  
+                
+                # Mean Absolute Error (MAE)
+                b_mae <- mean(abs(residuals))
+                b_mae <- round(b_mae, digits = cifry)
+                
+                # Mean Squared Error (MSE)
+                b_mse <- mean(residuals^2)
+                b_mse <- round(b_mse, digits = cifry)
+                
+                # Root Mean Squared Error (RMSE)
+                b_rmse <- sqrt(b_mse)
+                b_rmse <- round(b_rmse, digits = cifry)
+                
+                informace <- c(as.character(colnames(gt_dss)[i]), p_value, posun, moje_aic, moje_aicc, moje_bic, ar, d, ma, co, NA, 
+                               srovnavaci_model$aic, srovnavaci_model$aicc, srovnavaci_model$bic, mae, mse, rmse, b_mae, b_mse, b_rmse)
+                
                 
                 ssm <- rbind(ssm, informace)
                 
@@ -382,11 +486,8 @@ if (new_data == 0){
                 
                 
                 if (DEBUG == TRUE) {
-                if (rozeznani_do_tabulky == "regresor"){
                   barvicka <- "blue"
-                } else {
-                  barvicka <- "red"
-                }
+
                 
                 
                 # Plot the actual and fitted values
@@ -409,12 +510,15 @@ if (new_data == 0){
                 debug_print(colnames(gt_dss)[i])
               }
             }
+            
           }
         }
       }
-    }
-    debug_print(paste("Pocet statisticky signifikantnich promennych je", pocet_ss))
-    debug_print(ssm)
+    
+  }
+    print(paste("Pocet statisticky signifikantnich promennych je", pocet_ss))
+    print(paste("Tabulka arima modelu ma sloupecku:", ncol(tabulka_arima_modelu)))
+    print(paste("SSM ma sloupecku:", ncol(ssm)))
     tabulka_arima_modelu <- rbind(tabulka_arima_modelu, ssm)
   }
   
@@ -433,6 +537,9 @@ if (new_data == 0){
 }
 
 
+granger <- na.omit(granger)
+granger_sub <- granger %>% filter(granger_p_value < 0.05)
+granger_sub %>% count(column_name)
 
 
 
@@ -447,24 +554,26 @@ tabulka_arima_modelu_zaloha <- tabulka_arima_modelu
 
 tabulka_arima_modelu <- tabulka_arima_modelu_zaloha
 
-print(tabulka_arima_modelu)
+
+
+colnames(tabulka_auto_arimy)
+colnames(tabulka_arima_modelu)
 
 for (i in 1:nrow(tabulka_arima_modelu)) {
-  print(i)
-  if (tabulka_arima_modelu[i, "lag"] == "lag") {
+  if (tabulka_arima_modelu[i, "promenna"] == "originalni model") {
     tabulka_arima_modelu[i,] <- NA
   }
 }
 
+tabulka_arima_modelu$lag <- NULL
+
 tabulka_arima_modelu <- tabulka_arima_modelu[complete.cases(tabulka_arima_modelu), ]
 
 tabulka_arima_modelu <- tabulka_arima_modelu %>%
-  mutate(across(c("AIC", "AICc","BIC", "sAIC", "sAICc","sBIC"), as.numeric))
+  mutate(across(c("AIC", "AICc","BIC", "b_AIC", "b_AICc","b_BIC"), as.numeric))
 
-tabulka_arima_modelu$model <-  tabulka_arima_modelu$AIC + tabulka_arima_modelu$AICc + tabulka_arima_modelu$BIC
-tabulka_arima_modelu$benchmark <- tabulka_arima_modelu$sAIC + tabulka_arima_modelu$sAICc + tabulka_arima_modelu$sBIC
 
-tabulka_arima_modelu$vyslednice <- tabulka_arima_modelu$model - tabulka_arima_modelu$benchmark
+
 
 #View(tabulka_arima_modelu)
 
@@ -477,40 +586,359 @@ tabulka_arima_modelu$row_names <- gsub("\\.\\.\\.", "/", tabulka_arima_modelu$ro
 
 tabulka_arima_modelu$row_names <- gsub("(/[^/]*)/.*", "\\1", tabulka_arima_modelu$row_names)
 
+
+#sejvuju env jako env2
+tabulka_auto_arimy <- tabulka_auto_arimy %>%
+  mutate_at(vars(-row_names), as.numeric)
+
+tabulka_arima_modelu <- merge(tabulka_arima_modelu, tabulka_auto_arimy, by = c("row_names", "posun"))
+
+{
+pomocna_tabulka <- tabulka_arima_modelu[, c("row_names", "posun", "AR", "I", "MA")]
+
+pomocna_tabulka <- unique(pomocna_tabulka)
+
+pomocna_tabulka$pom_AIC <- 0
+pomocna_tabulka$pom_AICc <- 0
+pomocna_tabulka$pom_BIC <- 0
+pomocna_tabulka$pom_mae <- 0
+pomocna_tabulka$pom_mse <- 0
+pomocna_tabulka$pom_rmse <- 0
+
+cifra <- 9
+
+pomocna_tabulka <- pomocna_tabulka %>%
+  mutate_at(vars(-row_names), as.numeric)
+
+kolik_iteraci <- nrow(pomocna_tabulka)
+}
+
+
+for (i in 1:kolik_iteraci) {
+  posun <- pomocna_tabulka[i, "posun"]
+  
+  if(pomocna_tabulka[i, "posun"] == "2020/2"){
+    data <- ts_real_inf[(posun+1):(length(ts_real_inf)-36)]
+  } else if(pomocna_tabulka[i, "posun"] == "2022/2"){
+    data <- ts_real_inf[(posun+1):(length(ts_real_inf)-12)]
+  } else{
+    data <- ts_real_inf[(posun+1):length(ts_real_inf)]
+  }
+  
+  #data <- as.vector(ts_real_inf)
+  #data <- lag(data, posun)
+  #data <- ts(data, start = c(start[1], (start[2])), frequency = 12)
+  
+  data <- ts_real_inf[(posun+1):length(ts_real_inf)]
+  
+  ar <- pomocna_tabulka[i, "AR"]
+  dif <- pomocna_tabulka[i, "I"]
+  ma <- pomocna_tabulka[i, "MA"]
+  orderos <- c(ar, dif , ma)
+  print(paste(i,"iteraci z ", kolik_iteraci))
+  
+  model <- try(forecast::Arima(data, order = orderos))
+  
+  if (!inherits(arima_model, "try-error")) {
+    # Store the ARIMA model in the list if no error occurred
+  } else {
+    # Print a message and continue to the next iteration if an error occurred
+    cat("Error encountered for ARIMA(", i) # . Skipping this model.\n")
+    next  # Continue to the next iteration
+  }
+  
+  #print(model$aic)
+  pomocna_tabulka[i, "pom_AIC"] <- model$aic
+  pomocna_tabulka[i, "pom_AICc"] <- model$aicc
+  pomocna_tabulka[i, "pom_BIC"] <- model$bic
+  
+  residuals <- na.omit(data - fitted(model))
+  
+  pomocna_tabulka[i, "pom_mae"] <- round(mean(abs(residuals)), cifra)
+  pomocna_tabulka[i, "pom_mse"] <- round(mean(residuals^2), cifra)
+  pomocna_tabulka[i, "pom_rmse"] <- round(sqrt(mean(residuals^2)), cifra)
+}
+
+tabulka_arima_modelu <- merge(tabulka_arima_modelu, pomocna_tabulka, by = c("row_names", "posun", "AR", "I", "MA"))
+
+
+
+
+
+
+tabulka_arima_modelu$sc <-  tabulka_arima_modelu$AIC + tabulka_arima_modelu$AICc + tabulka_arima_modelu$BIC
+tabulka_arima_modelu$sc_b <- tabulka_arima_modelu$b_AIC + tabulka_arima_modelu$b_AICc + tabulka_arima_modelu$b_BIC
+tabulka_arima_modelu$vyslednice <- tabulka_arima_modelu$sc - tabulka_arima_modelu$sc_b
+
+tabulka_arima_modelu$model_bez_bic <-  tabulka_arima_modelu$AIC + tabulka_arima_modelu$AICc
+tabulka_arima_modelu$benchmark_bez_bic <- tabulka_arima_modelu$b_AIC + tabulka_arima_modelu$b_AICc
+tabulka_arima_modelu$vyslednice_bez_bic <- tabulka_arima_modelu$model_bez_bic - tabulka_arima_modelu$benchmark_bez_bic
+
+
+
+poradi <- c("row_names", "promenna", "coef", "p-value", "posun", "AR", "I", "MA", 
+            "AIC", "AICc", "BIC", "b_AIC","b_AICc","b_BIC", "pom_AIC", "pom_AICc", "pom_BIC", "a_AIC", "a_AICc", "a_BIC",#"bb_AIC", "bb_AICc", "bb_BIC",
+            "mae", "mse", "rmse", "b_mae", "b_mse", "b_rmse", "pom_mae", "pom_mse", "pom_rmse", "a_mae", "a_mse", "a_rmse",
+            "sc", "sc_b")
+
+tabulka_arima_modelu <- subset(tabulka_arima_modelu, select = poradi)
+
+
+
+tabulka_arima_modelu 
+
+
+tabulka_arima_modelu <- tabulka_arima_modelu %>%
+  group_by(row_names, promenna, posun)
+
+tabulka_arima_modelu <- tabulka_arima_modelu %>%
+  mutate_at(vars(-row_names, -promenna), as.numeric)
+
+tabulka_arima_modelu <- tabulka_arima_modelu %>%
+  mutate(a_sc = a_AIC + a_AICc + a_BIC) %>%
+  mutate(msc_b = sc-sc_b) %>%
+  mutate(asc_ = sc - a_sc) %>%
+  mutate(am_mae_b = mae - b_mae) %>%
+  mutate(am_mse_b = mse - b_mse) %>%
+  mutate(am_rmse_b = rmse - b_rmse) %>%
+  mutate(am_mae_sc = mae - a_mae) %>%
+  mutate(am_mse_sc = mse - a_mse) %>%
+  mutate(am_rmse_sc = rmse - a_rmse)
+
+
+View(tabulka_arima_modelu)
+
+tabulka_k_resultum <- tabulka_arima_modelu %>%
+  group_by(row_names, promenna, posun)
+
+View(tabulka_k_resultum)
+
+#tabulka ke srovnani s benchmarky
+b_result <- tabulka_arima_modelu %>%
+  group_by(row_names, promenna, posun) %>%
+  filter(sc == min(sc) | sc_b == min(sc_b)) %>%
+  filter(sc < a_sc) %>%
+  ungroup() %>%
+  mutate(srovnani = sc - sc_b)
+
+View(b_result)
+
+
+# tabulka ke srovnani s auto arimami
+a_result <- tabulka_arima_modelu %>%
+  group_by(row_names, promenna, posun) %>%
+  filter(sc == min(sc) | sc_b == min(a_sc)) %>%
+  filter(sc < a_sc) %>%
+  ungroup() %>%
+  mutate(srovnani = sc - a_sc)
+
+View(a_result)
+
+# control funguje
+control_result <- tabulka_arima_modelu %>%
+  group_by(row_names, promenna, posun) %>%
+  filter(sc_b == min(sc_b) | a_sc == min(a_sc)) %>%
+  filter(sc_b < a_sc) %>%
+  ungroup()
+
+View(control_result)
 # Print the updated dataframe
-print(tabulka_arima_modelu)
+
+# tabulka ke srovnani s auto arimami
+a_result <- tabulka_arima_modelu %>%
+  group_by(row_names, promenna, posun) %>%
+  filter(sc == min(sc) | sc_b == min(a_sc)) %>%
+  filter(sc < a_sc) %>%
+  ungroup() %>%
+  mutate(srovnani = sc - a_sc)
 
 
 
-min_rows <- tabulka_arima_modelu %>%
-  group_by(row_names) %>%
-  filter(model == min(model) | benchmark == min(benchmark))
 
-# Print the resulting dataframe
-print(min_rows)
+
+#sejv env jako env_arimy
+
+
+
+
+
+# do diplomky
+
+kolik_modelu_ma_lepsi <- function(dataframe, sloupec_1, sloupec_2){
+  x <- dataframe[,"sloupec_1"] - dataframe[,"sloupec_2"]
+  x <- x < 0 
+  x <- sum(x)
+  return(x)
+}
+
+
+#2019
+tabulka_arima_modelu[tabulka_arima_modelu[, "row_names"] == "2020/2",] %>% nrow() #pocet ss modelu
+
+data_2019 <- tabulka_arima_modelu[tabulka_arima_modelu[, "row_names"] == "2020/2",]
+
+x <- data_2019$sc - data_2019$sc_b
+x <- x < 0 
+x <- sum(x)
+print(x)
+
+x <- data_2019$sc - data_2019$a_sc
+x <- x < 0 
+x <- sum(x)
+print(x)
+
+x <- data_2019$rmse - data_2019$b_rmse
+x <- x < 0 
+x <- sum(x)
+print(x)
+
+
+x <- data_2019$mae - data_2019$b_mae
+x <- x < 0 
+x <- sum(x)
+print(x)
+
+x <- data_2019$mae - data_2019$a_mae
+x <- x < 0 
+x <- sum(x)
+print(x)
+
+
+x <- data_2019$rmse - data_2019$a_rmse
+quantile(x, prob = c(0.1,0.5,0.9))
+x <- x < 0 
+x <- sum(x)
+print(x)
+
+
+
+#2022
+
+
+tabulka_arima_modelu[tabulka_arima_modelu[, "row_names"] == "2022/2",] %>% nrow() #pocet ss modelu
+
+data_2019 <- tabulka_arima_modelu[tabulka_arima_modelu[, "row_names"] == "2022/2",]
+
+x <- data_2019$sc - data_2019$sc_b
+x <- x < 0 
+x <- sum(x)
+print(x)
+
+x <- data_2019$sc - data_2019$a_sc
+x <- x < 0 
+x <- sum(x)
+print(x)
+
+x <- data_2019$rmse - data_2019$b_rmse
+x <- x < 0 
+x <- sum(x)
+print(x)
+
+
+x <- data_2019$mae - data_2019$b_mae
+x <- x < 0 
+x <- sum(x)
+print(x)
+
+x <- data_2019$mae - data_2019$a_mae
+x <- x < 0 
+x <- sum(x)
+print(x)
+
+
+x <- data_2019$rmse - data_2019$a_rmse
+quantile(x, prob = c(0.1,0.5,0.9))
+x <- x < 0 
+x <- sum(x)
+print(x)
+
+
+
+
+
+#######################################################################################################
+# OUT-OF-SAMPLE FORECASTS and SETTINGS
+
+
+# Set up the window sizes for the rolling and expanding windows
+rolling_window_size <- 90
+expanding_window_size <- nrow(data) - rolling_window_size
+
+# Set up the initial model using the first window of data
+#model <- Arima(data[1:rolling_window_size, "ts_real_inf_3"], order = c(1,1,1), xreg = data[1:rolling_window_size, "ext_regressors"])
+
+# Set up empty vectors to store the forecasts and actuals
+rolling_forecasts <- numeric()
+rolling_actuals <- numeric()
+expanding_forecasts <- numeric()
+expanding_actuals <- numeric()
+
+window_size <- rolling_window_size  # Length of the rolling window
+n_ahead <- 1
+
+
+
+
+
+
+
+
 
 
 ######################################################################################################
-# Ten jediny funkcni model
+# nastaveni specifikaci konkretniho modelu
+
+posun <- 10
+
+
+  
+moudrobober <- as.vector(ts_real_inf)
+moudrobober <- lag(moudrobober, posun)
+moudrobober <- ts(moudrobober, start = c(start[1], (start[2])), frequency = 12)
+
+modelos <- forecast::auto.arima(moudrobober, max.p = 3, max.q = 3, ic = c("bic"), stepwise = FALSE)
+modelos
+  
+modelos$arma
+
+
+ar <- 0
+dif <- 1
+ma <- 1
+
+bench <- FALSE
+
+if(bench == TRUE){
+  ar_bez <- ar
+  dif_bez <- dif
+  ma_bez <- ma
+} else {
+  ar_bez <- modelos$arma[1]
+  dif_bez <- modelos$arma[6]
+  ma_bez <- modelos$arma[2]
+}
+
 
 end   <- c(2023, 2)
 
-regresor <- ts(data = gt_dss[,"inflace"], start = c(2004, 1), end = end, frequency = 12)
-regresor <- regresor / mean(regresor) * mean(ts_real_inf)
+regresor <- ts(data = gt_dss[,"cena.nafty"], start = c(2004, 1), end = end, frequency = 12)
+regresor <- regresor / mean(regresor) * mean(regresor)
 
-ext_regressor <- regresor
 #future_values <- opposite_lag(ext_regressor, 1)
-posun <- 1
-future_values <- stats::lag(ext_regressor, posun)
-ext_regressors <- ts(future_values[-(1:posun)], start = c(start[1], (start[2] + 1)), frequency = 12)
-arima_model <- try(forecast::Arima(ts_real_inf_3, order = c(1,1,2), xreg = ext_regressors))
+
+
+ext_regressor <- as.vector(regresor)
+ext_regressor <- lag(ext_regressor, posun)
+ext_regressors <- ts(ext_regressor, start = c(start[1], (start[2])), frequency = 12)
+
+arima_model <- try(forecast::Arima(ts_real_inf, order = c(ar,dif,ma), xreg = ext_regressors))
 #arima_model <- try(forecast::Arima(ts_real_inf_3, order = c(1,1,2)))
 
 arima_model$fitted
 
 
 # Combine the data into a single data frame
-data <- data.frame(ts_real_inf_3, ext_regressors)
+data <- data.frame(ts_real_inf, ext_regressors)
 
 uga <-  c("iterace", "ext", "rw", "mae", "mse", "rmse")
 
@@ -546,9 +974,9 @@ library(forecast)
 # Assuming ts_real_inf_3 and ext_regressors are time series objects with the same frequency and date range
 
 
-start_date <- start(ts_real_inf_3)
-end_date <- end(ts_real_inf_3)
-n_iterations <- length(ts_real_inf_3) - window_size - n_ahead + 1
+start_date <- start(ts_real_inf)
+end_date <- end(ts_real_inf)
+n_iterations <- length(ts_real_inf) - window_size - n_ahead
 
 
 forecasts_rw <- list()
@@ -557,11 +985,11 @@ for (i in 1:n_iterations) {
   debug_print(i/n_iterations)
   start_window <- start_date + (i - 1) * c(0, 1)
   end_window <- start_window + c(0, window_size - 1)
-  ts_window <- window(ts_real_inf_3, start = start_window, end = end_window)
+  ts_window <- window(ts_real_inf, start = start_window, end = end_window)
   ext_regressors_window <- window(ext_regressors, start = start_window, end = end_window)
   
   tryCatch({
-    model <- Arima(ts_window, order = c(1, 1, 2), xreg = ext_regressors_window)
+    model <- Arima(ts_window, order = c(ar, dif, ma), xreg = ext_regressors_window)
     
     start_forecast <- end_window + c(0, 1)
     end_forecast <- start_forecast + c(0, n_ahead - 1)
@@ -582,8 +1010,6 @@ point_estimates_rw <- do.call(c, lapply(forecasts_rw, function(x) x$mean))
 # bodiky
 {
 
-
-
 # Print the point estimates
 debug_print(point_estimates_rw)
 
@@ -592,7 +1018,7 @@ debug_print(point_estimates_rw)
 prec <- c(window_size )
 start_forecast_all <- start_date + c(0 , window_size)
 end_forecast_all <- end_date
-ts_forecast <- ts(point_estimates_rw, start = start_forecast_all, end = end_forecast_all, frequency = frequency(ts_real_inf_3))
+ts_forecast <- ts(point_estimates_rw, start = start_forecast_all, end = end_forecast_all, frequency = frequency(ts_real_inf))
 
 # Plot the actual and forecasted values together
 #ts.plot(ts_real_inf_3, ts_forecast, col = c("black", "red"), lty = c(1, 1), main = "Actual vs. Forecasted Values", xlab = "Time", ylab = "Value")
@@ -600,7 +1026,7 @@ ts_forecast <- ts(point_estimates_rw, start = start_forecast_all, end = end_fore
 
 
 # Extract the actual values for which we have forecasts
-actual_values <- window(ts_real_inf_3, start = start_forecast_all, end = end_forecast_all)
+actual_values <- window(ts_real_inf, start = start_forecast_all, end = end_forecast_all)
 
 # Calculate quality measures
 mae <- mean(abs(actual_values - point_estimates_rw))
@@ -616,9 +1042,9 @@ cat("Root Mean Squared Error (RMSE):", rmse, "\n")
 
 tabulka_nej_model <- rbind(tabulka_nej_model, c(bubu,"ext", "rw", mae, mse, rmse))
 
-start_date <- start(ts_real_inf_3)
-end_date <- end(ts_real_inf_3)
-n_iterations <- length(ts_real_inf_3) - window_size - n_ahead + 1
+start_date <- start(ts_real_inf)
+end_date <- end(ts_real_inf)
+n_iterations <- length(ts_real_inf) - window_size - n_ahead
 
 
 forecasts_rw_bez <- list()
@@ -627,11 +1053,11 @@ for (i in 1:n_iterations) {
   debug_print(i/n_iterations)
   start_window <- start_date + (i - 1) * c(0, 1)
   end_window <- start_window + c(0, window_size - 1)
-  ts_window <- window(ts_real_inf_3, start = start_window, end = end_window)
+  ts_window <- window(ts_real_inf, start = start_window, end = end_window)
   ext_regressors_window <- window(ext_regressors, start = start_window, end = end_window)
   
   tryCatch({
-    model <- Arima(ts_window, order = c(1, 1, 2))
+    model <- Arima(ts_window, order = c(ar_bez, dif_bez, ma_bez))
     
     start_forecast <- end_window + c(0, 1)
     end_forecast <- start_forecast + c(0, n_ahead - 1)
@@ -662,7 +1088,7 @@ point_estimates_rw_bez <- do.call(c, lapply(forecasts_rw_bez, function(x) x$mean
   prec <- c(window_size )
   start_forecast_all <- start_date + c(0 , window_size)
   end_forecast_all <- end_date
-  ts_forecast <- ts(point_estimates_rw_bez, start = start_forecast_all, end = end_forecast_all, frequency = frequency(ts_real_inf_3))
+  ts_forecast <- ts(point_estimates_rw_bez, start = start_forecast_all, end = end_forecast_all, frequency = frequency(ts_real_inf))
   
   # Plot the actual and forecasted values together
   #ts.plot(ts_real_inf_3, ts_forecast, col = c("black", "red"), lty = c(1, 1), main = "Actual vs. Forecasted Values", xlab = "Time", ylab = "Value")
@@ -670,7 +1096,7 @@ point_estimates_rw_bez <- do.call(c, lapply(forecasts_rw_bez, function(x) x$mean
   
   
   # Extract the actual values for which we have forecasts
-  actual_values <- window(ts_real_inf_3, start = start_forecast_all, end = end_forecast_all)
+  actual_values <- window(ts_real_inf, start = start_forecast_all, end = end_forecast_all)
   
   # Calculate quality measures
   mae <- mean(abs(actual_values - point_estimates_rw_bez))
@@ -687,13 +1113,13 @@ tabulka_nej_model <- rbind(tabulka_nej_model, c(bubu,"bez", "rw", mae, mse, rmse
 
 
 # Expanding window forecast
-n <- length(ts_real_inf_3)
+n <- length(ts_real_inf)
 start_forecast <- rolling_window_size
-forecasts <- ts(numeric(n - start_forecast + 1), start = start(ts_real_inf_3)[1] + (start_forecast - 1) / frequency(ts_real_inf_3), frequency = frequency(ts_real_inf_3))
+forecasts <- ts(numeric(n - start_forecast + 1), start = start(ts_real_inf)[1] + (start_forecast - 1) / frequency(ts_real_inf), frequency = frequency(ts_real_inf))
 
 for (t in start_forecast:n) {
   # Fit the ARIMA model with the external regressor on the expanding window
-  model <- Arima(ts_real_inf_3[1:(t - 1)], order = c(1, 1, 2), xreg = ext_regressors[1:(t - 1)])
+  model <- Arima(ts_real_inf[1:(t - 1)], order = c(ar, dif, ma), xreg = ext_regressors[1:(t - 1)])
   
   # One-step ahead forecast
   forecast <- predict(model, n.ahead = 1, newxreg = ext_regressors[t])
@@ -711,7 +1137,7 @@ lines(forecasts, col = "blue")
 
 
 # Calculate the errors
-errors <- forecasts - ts_real_inf_3[start_forecast:n]
+errors <- forecasts - ts_real_inf[start_forecast:n]
 
 # Calculate MAE
 mae <- mean(abs(errors))
@@ -739,7 +1165,7 @@ tabulka_nej_model <- rbind(tabulka_nej_model, c(bubu,"ext", "ew", mae, mse, rmse
 
 for (t in start_forecast:n) {
   # Fit the ARIMA model with the external regressor on the expanding window
-  model <- Arima(ts_real_inf_3[1:(t - 1)], order = c(1, 1, 2))
+  model <- Arima(ts_real_inf[1:(t - 1)], order = c(ar_bez, dif_bez, ma_bez))
   
   # One-step ahead forecast
   forecast <- predict(model, n.ahead = 1)
@@ -757,7 +1183,7 @@ for (t in start_forecast:n) {
   
   
   # Calculate the errors
-  errors <- forecasts - ts_real_inf_3[start_forecast:n]
+  errors <- forecasts - ts_real_inf[start_forecast:n]
   
   # Calculate MAE
   mae <- mean(abs(errors))
@@ -826,7 +1252,7 @@ for (model in unique(tabulka_nej_model$ext)) {
       }
       
       
-      matplot(data_graf$iterace, data_graf[, meritka], type = "l", ylim = c(0.3,0.9), 
+      matplot(data_graf$iterace, data_graf[, meritka], type = "l", ylim = c(0.0,0.9), 
               xlab = "(Starting) Window length", ylab = "Value", main = c(paste(nazev_grafu_rw, " - ", nazev_grafu_ext)))
       
 
@@ -865,7 +1291,7 @@ for (predpoved in unique(tabulka_nej_model$rw)) {
     osa_x <- "Starting window length"
   }
   
-  matplot(data_graf$iterace, data_graf[, meritka], type = "l", lty = line_types, ylim = c(0.3,0.9), 
+  matplot(data_graf$iterace, data_graf[, meritka], type = "l", lty = line_types, ylim = c(0.0,0.9), 
           xlab = osa_x, ylab = "Value", col = colores, main = nazev_grafu_rw)
   
   # Add a legend
@@ -908,8 +1334,8 @@ for (predpoved in unique(tabulka_nej_model$rw)) {
   print("3 nejlepsi settingy okna")
   print(testy[indices,"iterace"])
 
-  print("jak casto nizsi?")
-  print(sum(soucet_m < soucet_b))
+  print("jak casto nizsi? (%)")
+  print(sum(soucet_m < soucet_b)/length(soucet_b))
   
   print("parove modely")
   
@@ -1674,8 +2100,206 @@ if (i == 1){
 }
 
 
+{
+  ######################################################################################################
+  # three key benchmark models motherfucker!
+  
+  cifra <- 9
+  
+  # 2004 - 2020
+  
+  
+  uga <- ts(ts_real_inf[1:(length(ts_real_inf) - 36)], start = start, frequency = 12)
+  
+  benchmark_2020 <- forecast::Arima(uga, order = c(1,0,0))
+  forecast::auto.arima(uga)
+  
+  
+  residuals_2020 <- uga - fitted(benchmark_2020)
+  
+  mae_2020 <- mean(abs(residuals_2020))
+  mae_2020 <- round(mae_2020, digits = cifra)
+  
+  mse_2020 <- mean(residuals_2020^2)
+  mse_2020 <- round(mse_2020, digits = cifra)
+  
+  rmse_2020 <- sqrt(mse_2020)
+  rmse_2020 <- round(rmse_2020, digits = cifra)
+  
+  # 2004 - 2022
+  
+  buga <- ts(ts_real_inf[1:(length(ts_real_inf) - 12)], start = start, frequency = 12)
+  
+  benchmark_2022 <- forecast::Arima(buga, order = c(1,0,1))
+  forecast::auto.arima(buga)
+  
+  residuals_2022 <- buga - fitted(benchmark_2022)
+  
+  mae_2022 <- mean(abs(residuals_2022))
+  mae_2022 <- round(mae_2022, digits = cifra)
+  
+  mse_2022 <- mean(residuals_2022^2)
+  mse_2022 <- round(mse_2022, digits = cifra)
+  
+  rmse_2022 <- sqrt(mse_2022)
+  rmse_2022 <- round(rmse_2022, digits = cifra)
+  
+  # 2004 - 2023
+  
+  benchmark_2023 <- forecast::Arima(ts_real_inf, order = c(1,1,3))
+  benchmark_2023
+  
+  
+  residuals_2023 <- ts_real_inf - fitted(benchmark_2023)
+  
+  mae_2023 <- mean(abs(residuals_2023))
+  mae_2023 <- round(mae_2023, digits = cifra)
+  
+  mse_2023 <- mean(residuals_2023^2)
+  mse_2023 <- round(mse_2023, digits = cifra)
+  
+  rmse_2023 <- sqrt(mse_2023)
+  rmse_2023 <- round(rmse_2023, digits = cifra)
+  
+  set.seed(40)
+  og <- forecast::auto.arima(rnorm()) #ts_real_inf)
+  og
+  
+  og$order
+  
+  library(forecast)
+  
+  # Generate data from an ARIMA(3,0,2) process
+  set.seed(123)
+  sim_data <- arima.sim(list(order = c(3,0,3), ar = c(0.5, -0.25, 0.3), ma = c(0.4, -0.3, -0.2)), n = 500)
+  
+  # Plot the simulated data
+  plot(sim_data, main = "Simulated ARIMA(3,0,2) Data")
+  
+  # Use auto.arima to fit the simulated data
+  fit <- auto.arima(sim_data)
+  
+  # Print the order
+  cat("ARIMA order:", fit$arma[c(1,2,3)], "\n")
+  
+  # Summary of the fitted model
+  summary(fit)
+  fit$arma
+  og <- forecast::auto.arima(sim_data) #ts_real_inf)
+  og
+  og$arma
+  
+  
+  
+  # Extract fitted values
+  fitted_values <- fitted(og)
+  
+  # Calculate residuals
+  residuals <- ts_real_inf - fitted_values
+  
+  # Calculate MAE
+  mae <- mean(abs(residuals))
+  
+  # Calculate MSE
+  mse <- mean(residuals^2)
+  
+  # Calculate RMSE
+  rmse <- sqrt(mse)
+  
+  # Print the results
+  cat("MAE:", mae, "\n")
+  cat("MSE:", mse, "\n")
+  cat("RMSE:", rmse, "\n")
+  
+  b_2020 <- c("2020/2", benchmark_2020$aic, benchmark_2020$aicc, benchmark_2020$bic, mae_2020, mse_2020, rmse_2020)
+  b_2022 <- c("2022/2",benchmark_2022$aic, benchmark_2022$aicc, benchmark_2022$bic, mae_2022, mse_2022, rmse_2022)
+  b_2023 <- c("2023/2",benchmark_2023$aic, benchmark_2023$aicc, benchmark_2023$bic, mae_2023, mse_2023, rmse_2023)
+  
+  
+  three_key_benchmarks <- matrix(c(b_2020, b_2022, b_2023), nrow = 3, ncol = length(b_2020), byrow = TRUE)
+  colnames(three_key_benchmarks) <- c("row_names","bb_AIC", "bb_AICc", "bb_BIC", "bb_mae", "bb_mse", "bb_rmse")
+  row.names(three_key_benchmarks) <- c("2020/2", "2022/2", "2023/2")
+  three_key_benchmarks <- as.data.frame(three_key_benchmarks)
+  
+  three_key_benchmarks
+  
+  
+  tabulka_arima_modelu <- merge(tabulka_arima_modelu, three_key_benchmarks, by = "row_names")
+}
 
 
+
+
+
+
+
+
+min_rows <- tabulka_arima_modelu %>%
+  group_by(row_names) %>%
+  filter(model == min(model) | benchmark == min(benchmark))
+
+# Print the resulting dataframe
+print(min_rows)
+
+min_rows_bez_bic <- tabulka_arima_modelu %>%
+  group_by(row_names) %>%
+  filter(model_bez_bic == min(model_bez_bic) | benchmark_bez_bic == min(benchmark_bez_bic))
+
+# Print the resulting dataframe
+print(min_rows_bez_bic)
+
+
+
+min_rows_delay <- tabulka_arima_modelu %>% filter(lag == "delay")
+min_rows_delay
+
+
+
+
+
+
+
+nrow(result)
+result <- result %>%
+  mutate_at(vars(-row_names, -promenna, -lag), as.numeric)
+
+
+sum(result[,"vyslednice"]> 0)
+sum((result$rmse-result$b_rmse)>0)
+sum((result$mae-result$b_mae)>0)
+
+
+
+
+
+
+
+
+
+View(three_key_benchmarks)
+View(tabulka_arima_modelu)
+View(min_rows)
+View(min_rows_delay)
+View(result)
+
+
+
+print(xtable(three_key_benchmarks, caption = "Information criteria for three best model",
+             digits = 4, type = "latex"), file = "three_key_benchmarks.tex")
+
+
+
+
+
+
+
+
+
+
+
+
+
+# sejvni env
 
 
 
