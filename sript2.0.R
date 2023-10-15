@@ -717,7 +717,7 @@ View(tabulka_k_resultum)
 b_result <- tabulka_arima_modelu %>%
   group_by(row_names, promenna, posun) %>%
   filter(sc == min(sc) | sc_b == min(sc_b)) %>%
-  filter(sc < a_sc) %>%
+  filter(sc < a_sc) %>% #nemel bych tohle prepsat?
   ungroup() %>%
   mutate(srovnani = sc - sc_b)
 
@@ -1291,11 +1291,17 @@ for (predpoved in unique(tabulka_nej_model$rw)) {
     osa_x <- "Starting window length"
   }
   
-  matplot(data_graf$iterace, data_graf[, meritka], type = "l", lty = line_types, ylim = c(0.0,0.9), 
-          xlab = osa_x, ylab = "Value", col = colores, main = nazev_grafu_rw)
+  if(predpoved == "rw"){
+    matplot(data_graf$iterace, data_graf[, meritka], type = "l", lty = line_types, ylim = c(0.0,1.1), 
+            xlab = osa_x, ylab = "Value", col = colores, main = nazev_grafu_rw)
+  } else {
+    matplot(data_graf$iterace, data_graf[, meritka], type = "l", lty = line_types, ylim = c(0.0,1.1), 
+            xlab = osa_x, ylab = "Value", col = colores, main = nazev_grafu_rw)
+  }
+  
   
   # Add a legend
-  legend("top", legend = colnames(data_graf[, meritka]), col = colores, lty = line_types, cex = 1)
+  legend("bottomright", legend = colnames(data_graf[, meritka]), col = colores, lty = line_types, cex = 1)
 }
 
 
