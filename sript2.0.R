@@ -921,7 +921,7 @@ if(bench == TRUE){
 
 end   <- c(2023, 2)
 
-regresor <- ts(data = gt_dss[,"cena.nafty"], start = c(2004, 1), end = end, frequency = 12)
+regresor <- ts(data = gt_dss[,"cena.benzinu"], start = c(2004, 1), end = end, frequency = 12)
 regresor <- regresor / mean(regresor) * mean(regresor)
 
 #future_values <- opposite_lag(ext_regressor, 1)
@@ -1292,16 +1292,16 @@ for (predpoved in unique(tabulka_nej_model$rw)) {
   }
   
   if(predpoved == "rw"){
-    matplot(data_graf$iterace, data_graf[, meritka], type = "l", lty = line_types, ylim = c(0.0,1.1), 
+    matplot(data_graf$iterace, data_graf[, meritka], type = "l", lty = line_types, ylim = c(0.0,1.4), 
             xlab = osa_x, ylab = "Value", col = colores, main = nazev_grafu_rw)
   } else {
-    matplot(data_graf$iterace, data_graf[, meritka], type = "l", lty = line_types, ylim = c(0.0,1.1), 
+    matplot(data_graf$iterace, data_graf[, meritka], type = "l", lty = line_types, ylim = c(0.0,1.4), 
             xlab = osa_x, ylab = "Value", col = colores, main = nazev_grafu_rw)
   }
   
   
   # Add a legend
-  legend("bottomright", legend = colnames(data_graf[, meritka]), col = colores, lty = line_types, cex = 1)
+  legend("topleft", legend = colnames(data_graf[, meritka]), col = colores, lty = line_types, cex = 1)
 }
 
 
