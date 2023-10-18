@@ -901,7 +901,7 @@ modelos
   
 modelos$arma
 
-
+#pro naftu, benzin a pc1 idealni
 ar <- 0
 dif <- 1
 ma <- 1
@@ -921,7 +921,7 @@ if(bench == TRUE){
 
 end   <- c(2023, 2)
 
-regresor <- ts(data = gt_dss[,"cena.benzinu"], start = c(2004, 1), end = end, frequency = 12)
+regresor <- ts(data = gt_dss[,"PC1"], start = c(2004, 1), end = end, frequency = 12)
 regresor <- regresor / mean(regresor) * mean(regresor)
 
 #future_values <- opposite_lag(ext_regressor, 1)
