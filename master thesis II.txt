@@ -1,6 +1,6 @@
 Prvni konzultace
 
+- dava muj zpusob rolling window a expanding window forecasts smysl?
 - dava smysl spis klasicky benchmark nebo auto arimy?
 - kolik modelu vlastne ma smysl hloubeji rozebrat
 - co psat k hloubeji rozepsanym modelum?
-- co do diskuze
