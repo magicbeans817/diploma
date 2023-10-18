@@ -3,3 +3,4 @@ Prvni konzultace
 - dava smysl spis klasicky benchmark nebo auto arimy?
 - kolik modelu vlastne ma smysl hloubeji rozebrat
 - co psat k hloubeji rozepsanym modelum?
+- co do diskuze
