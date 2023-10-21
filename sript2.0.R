@@ -901,10 +901,16 @@ modelos
   
 modelos$arma
 
-#pro naftu, benzin a pc1 idealni
+#pro naftu, benzin a pc1 idealni pokud maji posun 10
 ar <- 0
 dif <- 1
 ma <- 1
+
+# cena posun 10, PC4 posun 10
+ar <- 1
+dif <- 1
+ma <- 2
+
 
 bench <- FALSE
 
@@ -921,7 +927,7 @@ if(bench == TRUE){
 
 end   <- c(2023, 2)
 
-regresor <- ts(data = gt_dss[,"PC1"], start = c(2004, 1), end = end, frequency = 12)
+regresor <- ts(data = gt_dss[,"PC4"], start = c(2004, 1), end = end, frequency = 12)
 regresor <- regresor / mean(regresor) * mean(regresor)
 
 #future_values <- opposite_lag(ext_regressor, 1)
@@ -1209,6 +1215,8 @@ tabulka_nej_model <- rbind(tabulka_nej_model, c(bubu, "bez", "ew", mae, mse, rms
 
 
 }
+
+
 #sejvuju env
 tabulka_nej_model <- as.data.frame(tabulka_nej_model)
 tabulka_nej_model_z <- tabulka_nej_model
