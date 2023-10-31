@@ -16,6 +16,8 @@ library(xtable)
 library(ggplot2)
 library(tidyr)
 library(tidyverse)
+library(dtable)
+
 
 
 new_data <- 0
@@ -662,10 +664,6 @@ for (i in 1:kolik_iteraci) {
 tabulka_arima_modelu <- merge(tabulka_arima_modelu, pomocna_tabulka, by = c("row_names", "posun", "AR", "I", "MA"))
 
 
-
-
-
-
 tabulka_arima_modelu$sc <-  tabulka_arima_modelu$AIC + tabulka_arima_modelu$AICc + tabulka_arima_modelu$BIC
 tabulka_arima_modelu$sc_b <- tabulka_arima_modelu$b_AIC + tabulka_arima_modelu$b_AICc + tabulka_arima_modelu$b_BIC
 tabulka_arima_modelu$vyslednice <- tabulka_arima_modelu$sc - tabulka_arima_modelu$sc_b
@@ -751,6 +749,103 @@ a_result <- tabulka_arima_modelu %>%
   filter(sc < a_sc) %>%
   ungroup() %>%
   mutate(srovnani = sc - a_sc)
+
+
+vytiskni_tabulky <- TRUE
+
+if(vytiskni_tabulky == TRUE){
+  
+  bb_result <- b_result
+  bb_result <- bb_result %>% arrange(srovnani)
+  
+  # Rename only the specific columns
+  colnames(bb_result)[colnames(bb_result) == "promenna"] <- "Search query"
+  colnames(bb_result)[colnames(bb_result) == "row_names"] <- "Upper time limit"
+  colnames(bb_result)[colnames(bb_result) == "b_AIC"] <- "AIC - Benchmark"
+  colnames(bb_result)[colnames(bb_result) == "b_AICc"] <- "AICc - Benchmark"
+  colnames(bb_result)[colnames(bb_result) == "b_BIC"] <- "BIC - Benchmark"
+  colnames(bb_result)[colnames(bb_result) == "p-value"] <- "p-value of external regressor coefficient"
+  colnames(bb_result)[colnames(bb_result) == "posun"] <- "Number of lags"
+  colnames(bb_result)[colnames(bb_result) == "mae"] <- "MAE"
+  colnames(bb_result)[colnames(bb_result) == "mse"] <- "MSE"
+  colnames(bb_result)[colnames(bb_result) == "rmse"] <- "RMSE"
+  colnames(bb_result)[colnames(bb_result) == "b_mae"] <- "MAE - Benchmark"
+  colnames(bb_result)[colnames(bb_result) == "b_mse"] <- "MSE - Benchmark"
+  colnames(bb_result)[colnames(bb_result) == "b_rmse"] <- "RMSE - Benchmark"
+  
+  
+  
+  
+  
+  # Subset the data to only the renamed columns
+  bb_result <- bb_result[, c("Search query", "Upper time limit", "Number of lags", 
+                             "AIC", "AICc", "BIC" , "AIC - Benchmark", "AICc - Benchmark", "BIC - Benchmark", 
+                             "MAE", "MSE", "RMSE", "MAE - Benchmark", "MSE - Benchmark", "RMSE - Benchmark")]
+  
+  bb_result <- bb_result[1:20,]
+  
+  
+  latex_table <- xtable(bb_result, caption="Descriptive Statistics of prominent External regressor models and its classic benchmarks", 
+                        label="tab:bb_result", align=c("p{2cm}", "p{1.5cm}", "p{1.0cm}", "p{1.5cm}", "p{1.0cm}", "p{1.0cm}", "p{1.0cm}",
+                                                       "p{1.0cm}", "p{1.0cm}", "p{1.0cm}", "p{1.0cm}", "p{1.0cm}", "p{1.0cm}", "p{1.0cm}", "p{1.0cm}", "p{1.0cm}"))
+  
+  # Print the LaTeX table to a file using longtable
+  print(latex_table, type="latex", file="bb_result.tex", 
+        table.placement="!ht", 
+        include.rownames=FALSE, 
+        tabular.environment='longtable', latex.table.attributes="\\centering")
+  
+  
+
+}
+
+if(vytiskni_tabulky == TRUE){
+  
+  aa_result <- a_result
+  aa_result <- aa_result %>% arrange(srovnani)
+  
+  # Rename only the specific columns
+  colnames(aa_result)[colnames(aa_result) == "promenna"] <- "Search query"
+  colnames(aa_result)[colnames(aa_result) == "row_names"] <- "Upper time limit"
+  colnames(aa_result)[colnames(aa_result) == "a_AIC"] <- "AIC - Benchmark"
+  colnames(aa_result)[colnames(aa_result) == "a_AICc"] <- "AICc - Benchmark"
+  colnames(aa_result)[colnames(aa_result) == "a_BIC"] <- "BIC - Benchmark"
+  colnames(aa_result)[colnames(aa_result) == "p-value"] <- "p-value of external regressor coefficient"
+  colnames(aa_result)[colnames(aa_result) == "posun"] <- "Number of lags"
+  colnames(aa_result)[colnames(aa_result) == "mae"] <- "MAE"
+  colnames(aa_result)[colnames(aa_result) == "mse"] <- "MSE"
+  colnames(aa_result)[colnames(aa_result) == "rmse"] <- "RMSE"
+  colnames(aa_result)[colnames(aa_result) == "a_mae"] <- "MAE - Benchmark"
+  colnames(aa_result)[colnames(aa_result) == "a_mse"] <- "MSE - Benchmark"
+  colnames(aa_result)[colnames(aa_result) == "a_rmse"] <- "RMSE - Benchmark"
+  
+  
+  
+  
+  
+  # Subset the data to only the renamed columns
+  aa_result <- aa_result[, c("Search query", "Upper time limit", "Number of lags", 
+                             "AIC", "AICc", "BIC" , "AIC - Benchmark", "AICc - Benchmark", "BIC - Benchmark", 
+                             "MAE", "MSE", "RMSE", "MAE - Benchmark", "MSE - Benchmark", "RMSE - Benchmark")]
+  
+  aa_result <- aa_result[1:20,]
+  
+  
+  latex_table <- xtable(aa_result, caption="Descriptive Statistics of prominent External regressor models and its auto.arima benchmarks", 
+                        label="tab:aa_result", align=c("p{2cm}", "p{1.5cm}", "p{1.0cm}", "p{1.5cm}", "p{1.0cm}", "p{1.0cm}", "p{1.0cm}",
+                                                       "p{1.0cm}", "p{1.0cm}", "p{1.0cm}", "p{1.0cm}", "p{1.0cm}", "p{1.0cm}", "p{1.0cm}", "p{1.0cm}", "p{1.0cm}"))
+  
+  # Print the LaTeX table to a file using longtable
+  print(latex_table, type="latex", file="aa_result.tex", 
+        table.placement="!ht", 
+        include.rownames=FALSE, 
+        tabular.environment='longtable', latex.table.attributes="\\centering")
+  
+  
+  
+}
+
+
 
 
 
