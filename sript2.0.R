@@ -16,7 +16,6 @@ library(xtable)
 library(ggplot2)
 library(tidyr)
 library(tidyverse)
-library(dtable)
 
 
 
@@ -751,7 +750,7 @@ a_result <- tabulka_arima_modelu %>%
   mutate(srovnani = sc - a_sc)
 
 
-vytiskni_tabulky <- TRUE
+vytiskni_tabulky <- FALSE
 
 if(vytiskni_tabulky == TRUE){
   
