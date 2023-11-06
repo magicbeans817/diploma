@@ -131,7 +131,7 @@ cifra <- 9
 jmena_sloupecku_auto_arimy <- c("row_names" , "posun",   "a_AIC", "a_AICc", "a_BIC", "a_mae", "a_mse", "a_rmse")
 tabulka_auto_arimy <- data.frame(matrix(ncol = length(jmena_sloupecku_auto_arimy), nrow = 0))
 
-
+colnames(gt_up)
 
 
 if (new_data == 0){
@@ -2401,7 +2401,8 @@ print(xtable(three_key_benchmarks, caption = "Information criteria for three bes
 
 
 
-
+print(xtable(as.data.frame(colnames(gt_up)), caption = "Search queries",
+                         digits = 4, type = "latex"), file = "search_queries.tex")
 
 
 
